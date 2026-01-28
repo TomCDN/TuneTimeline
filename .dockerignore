@@ -1,0 +1,13 @@
+# 1. Negeer ALLES (ook andere mappen als je per ongeluk vanuit de verkeerde plek build)
+*
+
+# 2. Toegestane bestanden (DIT IS HET SPEL)
+!app.py
+!requirements.txt
+!public/
+!public/**
+
+# 3. Docker configuratie (nodig om te kunnen bouwen)
+!Dockerfile
+!.dockerignore
+!docker-compose.yml

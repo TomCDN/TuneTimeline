@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tune Timeline | Multiplayer Music Party</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+</head>
+
+<body>
+    <div id="app">
+        <div class="top-controls">
+            <button id="layout-toggle-btn" class="icon-btn" title="Toggle Mobile/Desktop View">📱</button>
+        </div>
+        <!-- Lobby State -->
+        <div id="lobby-screen" class="screen">
+            <header>
+                <h1>Tune <span>Timeline</span></h1>
+                <p>The ultimate music timeline game</p>
+            </header>
+
+            <div class="glass-card main-controls">
+                <input type="text" id="username-input" placeholder="Enter your name..." maxlength="15">
+
+                <div class="actions">
+                    <button id="create-btn" class="primary-btn">✨ Create Party</button>
+                    <div class="divider"><span>OR</span></div>
+                    <div class="join-group">
+                        <input type="text" id="room-input" placeholder="Room Code" maxlength="5">
+                        <button id="join-btn" class="secondary-btn">🚀 Join Party</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Waiting Room -->
+        <div id="waiting-screen" class="screen hidden">
+            <div class="glass-card full-width">
+                <h2>Party Lobby: <span id="display-room-code">-----</span> <button id="copy-code-btn" class="icon-btn"
+                        title="Kopieer Uitnodiging">📋</button></h2>
+
+                <div class="teams-setup">
+                    <div class="team-column" id="team1-setup">
+                        <input type="text" id="team1-name-input" class="team-name-input" placeholder="Team 1 Name"
+                            value="Team 1">
+                        <ul class="player-list" id="team1-list"></ul>
+                        <button class="join-team-btn" data-team="team1">👥 Join Team 1</button>
+                        <div class="oracle-selector hidden" id="team1-oracle-selector">
+                            <label>🔮 Al-wetende:</label>
+                            <select id="team1-oracle-select">
+                                <option value="">Geen</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="divider-vertical">
+                        <span>VS</span>
+                        <button id="randomize-btn" class="icon-btn hidden" title="Hussel Teams">🎲</button>
+                    </div>
+
+                    <div class="team-column" id="team2-setup">
+                        <input type="text" id="team2-name-input" class="team-name-input" placeholder="Team 2 Name"
+                            value="Team 2">
+                        <ul class="player-list" id="team2-list"></ul>
+                        <button class="join-team-btn" data-team="team2">👥 Join Team 2</button>
+                        <div class="oracle-selector hidden" id="team2-oracle-selector">
+                            <label>🔮 Al-wetende:</label>
+                            <select id="team2-oracle-select">
+                                <option value="">Geen</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="waiting-footer">
+                    <ul id="unassigned-list" class="player-list"></ul>
+                    <div class="lobby-controls">
+                        <div class="settings-group" id="host-settings">
+                            <label for="target-score-input">Points to win:</label>
+                            <input type="number" id="target-score-input" value="10" min="1" max="50">
+                        </div>
+                        <button id="start-btn" class="primary-btn hidden">🎮 Start Game</button>
+                    </div>
+                    <p class="waiting-msg">Waiting for the host to start...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game State -->
+        <div id="game-screen" class="screen hidden">
+            <div class="game-header">
+                <div class="room-info">Room: <span id="game-room-code"></span></div>
+                <div id="current-player-name"></div>
+            </div>
+
+            <!-- Current Song Section -->
+            <div id="song-area" class="glass-card">
+                <div class="song-status">
+                    <div id="audio-visualizer" class="visualizer">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <p id="song-msg">A song is playing...</p>
+                </div>
+
+                <div id="hitster-guess-area" class="guess-area hidden">
+                    <div class="guess-inputs">
+                        <input type="text" id="guess-artist" placeholder="Guess Artist...">
+                        <input type="text" id="guess-title" placeholder="Guess Title...">
+                    </div>
+                    <button id="claim-token-btn" class="token-btn">💰 Guess for Token</button>
+                    <p class="token-hint">Guess both correctly to earn a Hitster Token!</p>
+                </div>
+
+                <div id="host-controls" class="host-area hidden">
+                    <button id="reveal-btn" class="primary-btn">🔍 Reveal Year</button>
+                </div>
+
+                <button id="confirm-placement-btn" class="confirm-btn hidden">✅ Bevestig Plaatsing</button>
+
+                <!-- Hidden audio element -->
+                <audio id="game-audio"></audio>
+            </div>
+
+            <!-- New Challenge Interface -->
+            <div id="challenge-interface" class="glass-card hidden">
+                <h3>Challenge Phase</h3>
+                <p>Team <span id="challenger-target-team">---</span> heeft een kaart geplaatst. Klopt dit?</p>
+                <div id="challenge-options" class="challenge-grid"></div>
+                <button id="skip-challenge-btn" class="secondary-btn">Geen Challenge (Doorgaan)</button>
+            </div>
+
+            <!-- Timeline -->
+            <div class="teams-container">
+                <div class="team-section" id="team1-section">
+                    <div class="team-header">
+                        <h3 id="team1-display-name">Team 1</h3>
+                        <div class="team-stats">
+                            <span class="team-score">Points: <span id="team1-score">0</span></span>
+                            <div class="token-bar" id="team1-tokens-bar"></div>
+                        </div>
+                    </div>
+                    <div id="team1-timeline" class="timeline">
+                        <div class="drop-zone" data-pos="0"></div>
+                    </div>
+                </div>
+
+                <div class="team-section" id="team2-section">
+                    <div class="team-header">
+                        <h3 id="team2-display-name">Team 2</h3>
+                        <div class="team-stats">
+                            <span class="team-score">Points: <span id="team2-score">0</span></span>
+                            <div class="token-bar" id="team2-tokens-bar"></div>
+                        </div>
+                    </div>
+                    <div id="team2-timeline" class="timeline">
+                        <div class="drop-zone" data-pos="0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <div class="glass-card full-width text-center">
+                <h1>🏆 GAME OVER 🏆</h1>
+                <div id="winner-display" class="winner-display"></div>
+                <div class="fireworks"></div>
+                <p id="game-over-msg">Bedankt voor het spelen!</p>
+                <div class="actions" style="position: relative; z-index: 50;">
+                    <button id="play-again-btn" class="primary-btn hidden">🔄 Opnieuw Spelen (Reset)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="glass-card modal-content">
+            <h3 id="modal-title">Notification</h3>
+            <p id="modal-message">Message goes here...</p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn" class="primary-btn">OK</button>
+                <button id="modal-cancel-btn" class="secondary-btn hidden">Annuleren</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="glass-card hidden">
+        <h3>Admin Access</h3>
+        <p>Enter master code to unlock settings</p>
+        <input type="password" id="admin-password-input" placeholder="Enter code...">
+        <div class="modal-buttons">
+            <button id="admin-login-btn">Login</button>
+            <button id="admin-login-cancel" class="secondary-btn">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-badge" class="admin-badge">Admin</div>
+    <div id="admin-panel" class="glass-card hidden">
+        <div class="admin-header">
+            <h3>⚙️ Admin Settings</h3>
+            <button id="close-admin-btn" class="close-icon-btn">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>🎵 Spotify Playlist URL:</label>
+            <p class="admin-hint">Maak eerst een party aan voor je een playlist laadt.</p>
+            <div class="input-with-btn">
+                <input type="text" id="playlist-url-input" placeholder="Spotify URL..."
+                    value="https://open.spotify.com/playlist/321iL49aeqqqtKfrQLO91I?si=bedb6d63e0034784">
+                <button id="load-playlist-btn" class="primary-btn">Load</button>
+            </div>
+            <div class="playlist-presets">
+                <button class="preset-btn" data-url="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M">🔥
+                    Today's Top Hits</button>
+                <button class="preset-btn" data-url="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM3r">🎸 80s
+                    Hits</button>
+                <button class="preset-btn" data-url="https://open.spotify.com/playlist/37i9dQZF1DXbT66uYS9bv1">📀 90s
+                    Hits</button>
+                <button class="preset-btn" data-url="https://open.spotify.com/playlist/37i9dQZF1DX48TT0uHpt7m">🇳🇱 Top
+                    50 NL</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>🏆 Points to Win:</label>
+            <input type="number" id="admin-target-score" value="10">
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="app.js?v=6"></script>
+</body>
+
+</html>

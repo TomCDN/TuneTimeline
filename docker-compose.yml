@@ -1,0 +1,12 @@
+services:
+  tune-timeline:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SECRET_KEY=your_development_secret_key_here
+      - ADMIN_PASSWORD=MASTER
+      - FLASK_DEBUG=true
+    volumes:
+      - .:/app
+    restart: unless-stopped
