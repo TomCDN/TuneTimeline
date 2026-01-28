@@ -10,8 +10,8 @@ from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-# For production, set actual origin. For local dev, allow localhost.
-socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+# Allow specific origins and wildcard to ensure connectivity
+socketio = SocketIO(app, cors_allowed_origins=["*", "http://tom.degroot.ovh", "https://tom.degroot.ovh"], async_mode='eventlet')
 
 import requests
 import re
