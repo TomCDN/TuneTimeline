@@ -1,21 +1,24 @@
-// --- IMMEDIATE DIAGNOSTIC (Runs before everything) ---
+// --- RESILIENT DIAGNOSTIC OVERLAY ---
 const diagnosticDiv = document.createElement('div');
-diagnosticDiv.style.cssText = "position: fixed; top: 5px; right: 5px; font-size: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px; border-radius: 4px; z-index: 99999; border: 1px solid #555;";
-diagnosticDiv.innerHTML = "JS: Loaded | Lib: Checking...";
+diagnosticDiv.style.cssText = "position: fixed; top: 5px; right: 5px; font-size: 10px; background: rgba(0,0,0,0.85); color: white; padding: 6px; border-radius: 4px; z-index: 99999; border: 1px solid #555; width: 180px; pointer-events: auto; font-family: monospace;";
+diagnosticDiv.innerHTML = `
+    <div id="diag-status" style="color:#aaa">JS: Loaded | Socket: ...</div>
+    <div id="diag-audio" style="color:#ffcc00; margin:3px 0; font-weight:bold;">Audio: Locked 🔒</div>
+    <div id="diag-error" style="color:#ff5555; display:none; border:1px solid #ff5555; padding:2px; margin:3px 0;"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #444; margin-top:4px; padding-top:4px;">
+        <span>Logs</span>
+        <button id="diag-unlock-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:1px 4px; cursor:pointer;">Unlock 🔊</button>
+    </div>
+    <div id="diag-logs" style="max-height:80px; overflow-y:auto; line-height:1.2;"></div>
+`;
 document.body.appendChild(diagnosticDiv);
 
-if (typeof io === 'undefined') {
-    diagnosticDiv.innerHTML = "JS: Loaded | Lib: <span style='color:red'>FAILED (Is Socket.io blocked?)</span>";
-    console.error("Socket.io library not found. Check if the script URL is reachable.");
-} else {
-    diagnosticDiv.innerHTML = "<div id='diag-status'>JS: Loaded | Lib: OK | Socket: Init...</div><div id='diag-logs' style='border-top:1px solid #555; margin-top:4px;'>[Logs]</div>";
-}
-
-// --- GLOBAL ERROR LOGGING (For iPad Debugging) ---
+// Error protection: Append instead of overwrite
 window.onerror = function (msg, url, line, col, error) {
-    if (diagnosticDiv) {
-        diagnosticDiv.style.background = "rgba(255,0,0,0.8)";
-        diagnosticDiv.innerHTML = `ERR: ${msg} <br> Line: ${line}`;
+    const errorEl = document.getElementById('diag-error');
+    if (errorEl) {
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = `ERR: ${msg} (L${line})`;
     }
     return false;
 };
@@ -24,19 +27,33 @@ function logToOverlay(msg) {
     const logEl = document.getElementById('diag-logs');
     if (logEl) {
         const timestamp = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        logEl.innerHTML += ` <br> [${timestamp}] ${msg}`;
-        // Limit lines
-        const lines = logEl.innerHTML.split('<br>');
-        if (lines.length > 8) logEl.innerHTML = '[Logs]' + lines.slice(-7).join('<br>');
+        const entry = document.createElement('div');
+        entry.style.borderBottom = "1px solid #333";
+        entry.textContent = `[${timestamp}] ${msg}`;
+        logEl.prepend(entry); // Newest on top
+        if (logEl.children.length > 10) logEl.lastChild.remove();
     }
 }
 
 function updateConnStatus(status, color) {
     const statusEl = document.getElementById('diag-status');
     if (statusEl) {
-        statusEl.innerHTML = `JS: OK | Lib: OK | Socket: <span style='color:${color}'>${status}</span>`;
+        statusEl.innerHTML = `Socket: <span style='color:${color}'>${status}</span>`;
     }
 }
+
+function updateAudioStatus(status, color) {
+    const audioEl = document.getElementById('diag-audio');
+    if (audioEl) {
+        audioEl.textContent = `Audio: ${status}`;
+        audioEl.style.color = color;
+    }
+}
+
+document.getElementById('diag-unlock-btn').onclick = () => {
+    logToOverlay("Manual unlock requested...");
+    unlockAudio();
+};
 
 // Elements
 const lobbyScreen = document.getElementById('lobby-screen');
@@ -112,7 +129,7 @@ const socket = io({
 
 // (diagnosticDiv handles status updates)
 
-// (Function updateConnStatus moved up to be near logToOverlay)
+// (Moved up)
 
 socket.on('connect_error', (err) => {
     console.error("Socket connection error:", err);
@@ -166,15 +183,26 @@ let hasVoted = false;
 // --- iOS Audio Autoplay Unlock ---
 let audioUnlocked = false;
 function unlockAudio() {
-    if (audioUnlocked) return;
-    if (!audioEl) return;
-    console.log("Unlocking audio for iOS...");
+    if (audioUnlocked) {
+        logToOverlay("Audio: Already unlocked ✅");
+        return;
+    }
+    if (!audioEl) {
+        logToOverlay("Audio: Element not found! ❌");
+        return;
+    }
+
+    updateAudioStatus("Unlocking... ⏳", "#ccff00");
+    logToOverlay("Audio: Triggering unlock play...");
+
     audioEl.play().then(() => {
         audioEl.pause();
         audioEl.currentTime = 0;
         audioUnlocked = true;
+        updateAudioStatus("OK ✅", "#00ff00");
         logToOverlay("Audio: UNLOCKED ✅");
     }).catch(err => {
+        updateAudioStatus("Locked 🔒", "#ffcc00");
         logToOverlay(`Audio: Unlock FAILED (${err.name})`);
         console.warn("Audio unlock failed (user interaction needed):", err);
     });
