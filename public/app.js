@@ -8,7 +8,7 @@ if (typeof io === 'undefined') {
     diagnosticDiv.innerHTML = "JS: Loaded | Lib: <span style='color:red'>FAILED (Is Socket.io blocked?)</span>";
     console.error("Socket.io library not found. Check if the script URL is reachable.");
 } else {
-    diagnosticDiv.innerHTML = "JS: Loaded | Lib: OK | Socket: Init...";
+    diagnosticDiv.innerHTML = "<div id='diag-status'>JS: Loaded | Lib: OK | Socket: Init...</div><div id='diag-logs' style='border-top:1px solid #555; margin-top:4px;'>[Logs]</div>";
 }
 
 // --- GLOBAL ERROR LOGGING (For iPad Debugging) ---
@@ -21,12 +21,20 @@ window.onerror = function (msg, url, line, col, error) {
 };
 
 function logToOverlay(msg) {
-    if (diagnosticDiv) {
+    const logEl = document.getElementById('diag-logs');
+    if (logEl) {
         const timestamp = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        diagnosticDiv.innerHTML += ` <br> [${timestamp}] ${msg}`;
+        logEl.innerHTML += ` <br> [${timestamp}] ${msg}`;
         // Limit lines
-        const lines = diagnosticDiv.innerHTML.split('<br>');
-        if (lines.length > 5) diagnosticDiv.innerHTML = lines.slice(-5).join('<br>');
+        const lines = logEl.innerHTML.split('<br>');
+        if (lines.length > 8) logEl.innerHTML = '[Logs]' + lines.slice(-7).join('<br>');
+    }
+}
+
+function updateConnStatus(status, color) {
+    const statusEl = document.getElementById('diag-status');
+    if (statusEl) {
+        statusEl.innerHTML = `JS: OK | Lib: OK | Socket: <span style='color:${color}'>${status}</span>`;
     }
 }
 
@@ -104,11 +112,7 @@ const socket = io({
 
 // (diagnosticDiv handles status updates)
 
-function updateConnStatus(status, color) {
-    if (diagnosticDiv) {
-        diagnosticDiv.innerHTML = `JS: OK | Lib: OK | Socket: <span style='color:${color}'>${status}</span>`;
-    }
-}
+// (Function updateConnStatus moved up to be near logToOverlay)
 
 socket.on('connect_error', (err) => {
     console.error("Socket connection error:", err);
