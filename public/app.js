@@ -1,3 +1,16 @@
+// --- IMMEDIATE DIAGNOSTIC (Runs before everything) ---
+const diagnosticDiv = document.createElement('div');
+diagnosticDiv.style.cssText = "position: fixed; top: 5px; right: 5px; font-size: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px; border-radius: 4px; z-index: 99999; border: 1px solid #555;";
+diagnosticDiv.innerHTML = "JS: Loaded | Lib: Checking...";
+document.body.appendChild(diagnosticDiv);
+
+if (typeof io === 'undefined') {
+    diagnosticDiv.innerHTML = "JS: Loaded | Lib: <span style='color:red'>FAILED (Is Socket.io blocked?)</span>";
+    console.error("Socket.io library not found. Check if the script URL is reachable.");
+} else {
+    diagnosticDiv.innerHTML = "JS: Loaded | Lib: OK | Socket: Init...";
+}
+
 // Elements
 const lobbyScreen = document.getElementById('lobby-screen');
 const waitingScreen = document.getElementById('waiting-screen');
@@ -38,15 +51,12 @@ const socket = io({
     forceNew: true
 });
 
-// --- Connection UI status ---
-const connStatus = document.createElement('div');
-connStatus.style.cssText = "position: fixed; bottom: 5px; right: 5px; font-size: 10px; padding: 2px 5px; border-radius: 3px; z-index: 10000; opacity: 0.6; pointer-events: none;";
-document.body.appendChild(connStatus);
+// (diagnosticDiv handles status updates)
 
 function updateConnStatus(status, color) {
-    connStatus.textContent = `Socket: ${status}`;
-    connStatus.style.background = color;
-    connStatus.style.color = "white";
+    if (diagnosticDiv) {
+        diagnosticDiv.innerHTML = `JS: OK | Lib: OK | Socket: <span style='color:${color}'>${status}</span>`;
+    }
 }
 
 socket.on('connect_error', (err) => {
