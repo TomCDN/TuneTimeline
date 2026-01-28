@@ -58,6 +58,38 @@ const layoutToggleBtn = document.getElementById('layout-toggle-btn');
 const revealBtn = document.getElementById('reveal-btn');
 const hostControls = document.getElementById('host-controls');
 
+// --- Admin Panel Elements ---
+const adminBadge = document.getElementById('admin-badge');
+const adminLoginModal = document.getElementById('admin-login-modal');
+const adminPasswordInput = document.getElementById('admin-password-input');
+const adminLoginBtn = document.getElementById('admin-login-btn');
+const adminLoginCancel = document.getElementById('admin-login-cancel');
+const adminPanel = document.getElementById('admin-panel');
+const playlistUrlInput = document.getElementById('playlist-url-input');
+const loadPlaylistBtn = document.getElementById('load-playlist-btn');
+const closeAdminBtn = document.getElementById('close-admin-btn');
+const adminTargetScore = document.getElementById('admin-target-score');
+
+let adminTracks = [];
+
+// --- Team/Player Elements ---
+const team1List = document.getElementById('team1-list');
+const team2List = document.getElementById('team2-list');
+const unassignedList = document.getElementById('unassigned-list');
+
+// --- Helper Functions ---
+function updatePlayerList(players) {
+    if (!unassignedList) return;
+    unassignedList.innerHTML = '';
+    const playerArray = Array.isArray(players) ? players : (players ? Object.values(players) : []);
+    playerArray.forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'player-item';
+        const name = typeof p === 'string' ? p : (p.name || 'Onbekend');
+        li.textContent = name;
+        unassignedList.appendChild(li);
+    });
+}
 // Robust Socket.IO initialization with improved mobile settings
 const socket = io({
     transports: ['websocket', 'polling'], // Prefer WebSockets, fall back to polling
@@ -142,9 +174,7 @@ function unlockAudio() {
         console.warn("Audio unlock failed (user interaction needed):", err);
     });
 }
-const team1List = document.getElementById('team1-list');
-const team2List = document.getElementById('team2-list');
-const unassignedList = document.getElementById('unassigned-list');
+// (Moved up)
 
 // --- Layout Persistence ---
 const savedLayout = localStorage.getItem('gameLayout') || 'mobile';
@@ -1215,76 +1245,7 @@ function handleChallenge(pos) {
 }
 
 
-// --- Hitster Token Logic ---
-claimTokenBtn.addEventListener('click', () => {
-    if (!currentSongData) return showNotification("Fout", "Er speelt geen nummer!");
-    if (!myTeam) return showNotification("Fout", "Je zit niet in een team!");
-
-    const artistGuess = guessArtistInput.value.trim().toLowerCase();
-    const titleGuess = guessTitleInput.value.trim().toLowerCase();
-
-    // Validatie
-    if (!artistGuess || !titleGuess) return showNotification("Incompleet", "Vul zowel artiest als titel in!");
-
-    const actualArtist = currentSongData.artist.toLowerCase();
-    const actualTitle = currentSongData.title.toLowerCase();
-
-    // Simple fuzzy matching
-    const isArtistCorrect = actualArtist.includes(artistGuess) || artistGuess.includes(actualArtist);
-    const isTitleCorrect = actualTitle.includes(titleGuess) || titleGuess.includes(actualTitle);
-
-    if (isArtistCorrect && isTitleCorrect) {
-        showNotification("CORRECT! 🎉", "Je team verdient een Hitster Token!");
-        claimTokenBtn.disabled = true;
-        claimTokenBtn.innerText = "✅ Token Claimed!";
-
-        socket.emit('game-action', {
-            roomCode: myRoomCode,
-            action: 'claim-token',
-            data: { teamId: myTeam }
-        });
-    } else {
-        showNotification("Helaas ❌", "Het was niet helemaal goed.");
-    }
-});
-
-// --- Host Controls ---
-revealBtn.onclick = () => {
-    console.log("Reveal button clicked, currentPlacement:", currentPlacement, "roomCode:", myRoomCode);
-
-    // Always send the reveal request - server will validate
-    socket.emit('game-action', {
-        roomCode: myRoomCode,
-        action: 'reveal-year'
-    });
-
-    // Give visual feedback
-    revealBtn.disabled = true;
-    revealBtn.innerText = "⏳ Revealing...";
-
-    // Re-enable after a short delay (in case of error)
-    setTimeout(() => {
-        revealBtn.disabled = false;
-        revealBtn.innerText = "🔍 Reveal Year";
-    }, 2000);
-};
-
-// --- Music Logic (iTunes API Integration) ---
-// --- Admin Panel Logic ---
-// --- Admin Panel Logic ---
-const adminBadge = document.getElementById('admin-badge');
-const adminLoginModal = document.getElementById('admin-login-modal');
-const adminPasswordInput = document.getElementById('admin-password-input');
-const adminLoginBtn = document.getElementById('admin-login-btn');
-const adminLoginCancel = document.getElementById('admin-login-cancel');
-const adminPanel = document.getElementById('admin-panel');
-const playlistUrlInput = document.getElementById('playlist-url-input');
-const loadPlaylistBtn = document.getElementById('load-playlist-btn');
-const closeAdminBtn = document.getElementById('close-admin-btn');
-const adminTargetScore = document.getElementById('admin-target-score');
-
-let adminTracks = [];
-
+// --- Admin/Token Logic Re-restored ---
 adminBadge.addEventListener('click', () => {
     adminLoginModal.classList.remove('hidden');
     adminPasswordInput.focus();
@@ -1300,6 +1261,16 @@ adminLoginBtn.addEventListener('click', () => {
     socket.emit('admin-login', password);
     adminPasswordInput.value = '';
 });
+
+revealBtn.onclick = () => {
+    socket.emit('game-action', { roomCode: myRoomCode, action: 'reveal-year' });
+    revealBtn.disabled = true;
+    revealBtn.innerText = "⏳ Revealing...";
+    setTimeout(() => {
+        revealBtn.disabled = false;
+        revealBtn.innerText = "🔍 Reveal Year";
+    }, 2000);
+};
 
 // Server response to admin login
 socket.on('admin-authenticated', (success) => {
