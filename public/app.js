@@ -169,8 +169,9 @@ function unlockAudio() {
         audioEl.pause();
         audioEl.currentTime = 0;
         audioUnlocked = true;
-        console.log("Audio successfully unlocked!");
+        logToOverlay("Audio: UNLOCKED ✅");
     }).catch(err => {
+        logToOverlay(`Audio: Unlock FAILED (${err.name})`);
         console.warn("Audio unlock failed (user interaction needed):", err);
     });
 }
@@ -403,6 +404,10 @@ joinBtn.addEventListener('click', () => {
     myName = usernameInput.value.trim();
     const code = roomInput.value.trim().toUpperCase();
     if (!myName || !code) return showNotification("Oeps", "Vul naam en room code in!");
+    // Secondary attempt for iOS
+    if (audioEl && !audioUnlocked) {
+        audioEl.play().then(() => { audioEl.pause(); audioUnlocked = true; logToOverlay("Audio: Manual Unlock OK"); }).catch(() => { });
+    }
     logToOverlay(`Emit: join-room (${code})`);
     socket.emit('join-room', { roomCode: code, userName: myName });
 });
@@ -876,15 +881,36 @@ socket.on('new-song', ({ songData, activeTeam: serverActiveTeam, turnState: serv
     myVote = null;
     hasVoted = false;
 
+    logToOverlay(`Song: ${songData.artist} - ${songData.title}`);
     audioEl.src = songData.url;
-    audioEl.play().catch(err => {
-        console.warn("Autoplay blocked or failed:", err);
-        // On iOS, sometimes the first "unlock" isn't enough if much time has passed.
-        // Show a temporary play button overlay if blocked.
-        document.getElementById('song-msg').innerHTML = `${teamsData[activeTeam].name}'s Turn <br> <button onclick="audioEl.play(); this.remove();" class="primary-btn" style="width:auto; margin-top:10px; display:inline-flex;">▶️ Play Song</button>`;
-    });
+    audioEl.load(); // Force load on mobile
 
-    document.getElementById('song-msg').innerText = `${teamsData[activeTeam].name}'s Turn: Where does this fit?`;
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            logToOverlay("Audio: Playing! 🎶");
+            document.getElementById('song-msg').innerText = `${teamsData[activeTeam].name}'s Turn: Where does this fit?`;
+        }).catch(err => {
+            logToOverlay("Audio: BLOCKED ⏸️ (Play manually)");
+            console.warn("Autoplay blocked or failed:", err);
+            // Show a BIG manual play button if blocked
+            document.getElementById('song-msg').innerHTML = `
+                <div style="padding: 10px; border: 2px solid var(--primary); border-radius: 10px; background: rgba(0,0,0,0.3); margin-top: 10px;">
+                    <p style="color:var(--primary); font-weight:bold; margin-bottom:5px;">⚠️ Muziek is gepauzeerd door je browser.</p>
+                    <button id="manual-play-trigger" class="primary-btn" style="width:auto; display:inline-flex; padding: 15px 30px; font-size: 1.2em;">▶️ START MUZIEK</button>
+                </div>
+            `;
+            const trigger = document.getElementById('manual-play-trigger');
+            if (trigger) {
+                trigger.onclick = () => {
+                    audioEl.play().then(() => {
+                        logToOverlay("Audio: Manual Play OK");
+                        document.getElementById('song-msg').innerText = `${teamsData[activeTeam].name}'s Turn: Where does this fit?`;
+                    });
+                };
+            }
+        });
+    }
 
     // Highlight active team
     document.querySelectorAll('.team-section').forEach(s => s.classList.remove('active'));
