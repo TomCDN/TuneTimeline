@@ -28,10 +28,11 @@ const hostControls = document.getElementById('host-controls');
 
 // Robust Socket.IO initialization for mobile/tablets
 const socket = io({
-    transports: ['polling', 'websocket'], // Start with polling for better compatibility
-    upgrade: true,
+    transports: ['polling', 'websocket'], // Allow falling back to polling if websocket fails
     reconnection: true,
-    reconnectionAttempts: 10
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: Infinity
 });
 
 socket.on('connect_error', (err) => {

@@ -10,8 +10,17 @@ from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-# Allow specific origins and wildcard to ensure connectivity
-socketio = SocketIO(app, cors_allowed_origins=["*", "http://tom.degroot.ovh", "https://tom.degroot.ovh"], async_mode='eventlet')
+# Enhanced Socket.IO configuration for mobile stability
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode='eventlet', 
+    logger=True, 
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25,
+    manage_session=False # Often better for mobile devices
+)
 
 import requests
 import re
