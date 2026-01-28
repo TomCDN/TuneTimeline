@@ -722,14 +722,17 @@ socket.on('game-started', async () => {
     if (isHost) {
         // Initialize Timelines with one card each
         try {
-            const team1Song = await getTeamStarterSong();
-            const team2Song = await getTeamStarterSong();
+            console.log("Fetching starter songs in parallel...");
+            const [team1Song, team2Song] = await Promise.all([
+                getTeamStarterSong(),
+                getTeamStarterSong()
+            ]);
             socket.emit('game-action', {
                 roomCode: myRoomCode,
                 action: 'init-starter-cards',
                 data: { team1Song, team2Song }
             });
-            setTimeout(fetchNextSong, 2000);
+            setTimeout(fetchNextSong, 1500); // Slightly faster delay
         } catch (err) {
             console.error("Failed to init starter cards:", err);
             renderTimelines();
@@ -1272,22 +1275,32 @@ async function fetchNextSong() {
     };
 
     while (retryCount < maxRetries) {
-        let query = "";
         if (adminTracks.length > 0) {
-            // Pick 5 random tracks from admin list and try them one by one
+            // Pick 5 random tracks from admin list and try them in parallel
             const candidates = [];
-            for (let i = 0; i < 5; i++) candidates.push(adminTracks[Math.floor(Math.random() * adminTracks.length)]);
+            for (let i = 0; i < 5; i++) {
+                const track = adminTracks[Math.floor(Math.random() * adminTracks.length)];
+                if (!isPlayed(track.artist, track.name)) candidates.push(track);
+            }
 
-            for (const track of candidates) {
-                if (isPlayed(track.artist, track.name)) continue;
-                query = `${track.artist} ${track.name}`;
+            if (candidates.length === 0) {
+                retryCount++;
+                continue;
+            }
 
-                try {
-                    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=15`);
-                    const data = await response.json();
-                    const results = data.results.filter(t => t.previewUrl);
+            try {
+                // Fetch all candidates in parallel
+                const fetchPromises = candidates.map(track =>
+                    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(track.artist + ' ' + track.name)}&media=music&limit=10`)
+                        .then(r => r.json())
+                        .catch(e => ({ results: [] }))
+                );
 
-                    // Look through ALL results from iTunes instead of just the first one
+                const allData = await Promise.all(fetchPromises);
+
+                // Find first valid track across all results
+                for (const data of allData) {
+                    const results = (data.results || []).filter(t => t.previewUrl);
                     const validTrack = results.find(t => !isPlayed(t.artistName, t.trackName));
 
                     if (validTrack) {
@@ -1297,26 +1310,28 @@ async function fetchNextSong() {
                             year: new Date(validTrack.releaseDate).getFullYear(),
                             url: validTrack.previewUrl
                         };
+                        console.log("Successfully fetched song (Admin Playlist):", songData.title);
                         socket.emit('game-action', { roomCode: myRoomCode, action: 'play-song', data: songData });
-                        return; // Success!
+                        return; // Done!
                     }
-                } catch (e) {
-                    console.error("iTunes fetch error:", e);
                 }
+            } catch (e) {
+                console.error("Parallel fetch error:", e);
             }
         } else {
-            // Fallback to random genres
-            const genres = ['80s hits', '90s hits', '00s hits', '2010s hits', 'pop music', 'rock legends'];
-            query = genres[Math.floor(Math.random() * genres.length)];
+            // Fallback to random genres - more aggressive fetching
+            const genres = ['80s music hits', '90s music hits', '00s music hits', 'Top 40 hits', 'Classic Rock hits'];
+            const query = genres[Math.floor(Math.random() * genres.length)];
 
             try {
-                const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50`);
+                console.log("Fetching fallback songs for query:", query);
+                const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=200`);
                 const data = await response.json();
                 const results = data.results.filter(t => t.previewUrl);
 
-                // Shuffle results to get more variety
-                const shuffled = results.sort(() => 0.5 - Math.random());
-                const validTrack = shuffled.find(t => !isPlayed(t.artistName, t.trackName));
+                // Fast shuffle and pick
+                const validTrack = results.sort(() => 0.5 - Math.random())
+                    .find(t => !isPlayed(t.artistName, t.trackName));
 
                 if (validTrack) {
                     const songData = {
@@ -1325,6 +1340,7 @@ async function fetchNextSong() {
                         year: new Date(validTrack.releaseDate).getFullYear(),
                         url: validTrack.previewUrl
                     };
+                    console.log("Successfully fetched song (Random Logic):", songData.title);
                     socket.emit('game-action', { roomCode: myRoomCode, action: 'play-song', data: songData });
                     return;
                 }
