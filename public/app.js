@@ -1,25 +1,43 @@
-// --- RESILIENT DIAGNOSTIC OVERLAY ---
+// --- RESILIENT DIAGNOSTIC SYSTEM (Toggleable) ---
+const diagToggle = document.createElement('button');
+diagToggle.id = 'diag-toggle';
+diagToggle.textContent = '!';
+diagToggle.style.cssText = "position: fixed; bottom: 15px; right: 15px; width: 35px; height: 35px; border-radius: 50%; background: #444; color: white; border: 2px solid #666; font-weight: bold; font-size: 18px; cursor: pointer; z-index: 100000; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.5); opacity: 0.7;";
+document.body.appendChild(diagToggle);
+
 const diagnosticDiv = document.createElement('div');
-diagnosticDiv.style.cssText = "position: fixed; top: 5px; right: 5px; font-size: 10px; background: rgba(0,0,0,0.85); color: white; padding: 6px; border-radius: 4px; z-index: 99999; border: 1px solid #555; width: 180px; pointer-events: auto; font-family: monospace;";
+diagnosticDiv.id = 'diag-panel';
+diagnosticDiv.style.cssText = "position: fixed; bottom: 60px; right: 15px; font-size: 10px; background: rgba(0,0,0,0.9); color: white; padding: 10px; border-radius: 8px; z-index: 99999; border: 1px solid #555; width: 220px; display: none; font-family: monospace; pointer-events: auto;";
 diagnosticDiv.innerHTML = `
-    <div id="diag-status" style="color:#aaa">JS: Loaded | Socket: ...</div>
-    <div id="diag-audio" style="color:#ffcc00; margin:3px 0; font-weight:bold;">Audio: Locked 🔒</div>
-    <div id="diag-error" style="color:#ff5555; display:none; border:1px solid #ff5555; padding:2px; margin:3px 0;"></div>
-    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #444; margin-top:4px; padding-top:4px;">
-        <span>Logs</span>
-        <button id="diag-unlock-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:1px 4px; cursor:pointer;">Unlock 🔊</button>
+    <div style="font-weight:bold; border-bottom:1px solid #444; padding-bottom:4px; margin-bottom:6px; display:flex; justify-content:space-between;">
+        <span>DIAGNOSTICS</span>
+        <span onclick="document.getElementById('diag-panel').style.display='none'" style="cursor:pointer; padding:0 5px;">×</span>
     </div>
-    <div id="diag-logs" style="max-height:80px; overflow-y:auto; line-height:1.2;"></div>
+    <div id="diag-status" style="color:#aaa">Socket: ...</div>
+    <div id="diag-audio" style="color:#ffcc00; margin:3px 0; font-weight:bold;">Audio: Locked 🔒</div>
+    <div id="diag-error" style="color:#ff5555; display:none; border:1px solid #ff5555; padding:4px; margin:3px 0; font-size:9px;"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #444; margin-top:6px; padding-top:6px;">
+        <span style="font-size:9px; color:#888;">Live Logs</span>
+        <button id="diag-unlock-btn" style="background:var(--primary); color:white; border:none; font-size:10px; padding:3px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">FORCE UNLOCK 🔊</button>
+    </div>
+    <div id="diag-logs" style="max-height:120px; overflow-y:auto; line-height:1.3; margin-top:5px; font-size:9px; background:#111; padding:4px;"></div>
 `;
 document.body.appendChild(diagnosticDiv);
+
+diagToggle.onclick = (e) => {
+    e.stopPropagation();
+    const panel = document.getElementById('diag-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+};
 
 // Error protection: Append instead of overwrite
 window.onerror = function (msg, url, line, col, error) {
     const errorEl = document.getElementById('diag-error');
     if (errorEl) {
         errorEl.style.display = 'block';
-        errorEl.innerHTML = `ERR: ${msg} (L${line})`;
+        errorEl.innerHTML = `ERR: ${msg} <br> (Line: ${line})`;
     }
+    logToOverlay(`!!!! CRASH: ${msg}`);
     return false;
 };
 
@@ -28,10 +46,11 @@ function logToOverlay(msg) {
     if (logEl) {
         const timestamp = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const entry = document.createElement('div');
-        entry.style.borderBottom = "1px solid #333";
+        entry.style.borderBottom = "1px solid #222";
+        entry.style.padding = "2px 0";
         entry.textContent = `[${timestamp}] ${msg}`;
-        logEl.prepend(entry); // Newest on top
-        if (logEl.children.length > 10) logEl.lastChild.remove();
+        logEl.prepend(entry);
+        if (logEl.children.length > 20) logEl.lastChild.remove();
     }
 }
 
@@ -194,6 +213,7 @@ function unlockAudio() {
 
     updateAudioStatus("Unlocking... ⏳", "#ccff00");
     logToOverlay("Audio: Triggering unlock play...");
+    logToOverlay(`Audio State: vol=${audioEl.volume}, muted=${audioEl.muted}, src=${audioEl.src ? 'set' : 'empty'}`);
 
     audioEl.play().then(() => {
         audioEl.pause();
@@ -203,7 +223,7 @@ function unlockAudio() {
         logToOverlay("Audio: UNLOCKED ✅");
     }).catch(err => {
         updateAudioStatus("Locked 🔒", "#ffcc00");
-        logToOverlay(`Audio: Unlock FAILED (${err.name})`);
+        logToOverlay(`Audio: Unlock FAILED (${err.name}: ${err.message})`);
         console.warn("Audio unlock failed (user interaction needed):", err);
     });
 }
