@@ -21,7 +21,7 @@ import json
 rooms = {}
 admins = set() # Store SIDs of authenticated admins
 
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'MASTER') # Should be set in env
+ADMIN_PASSWORD = 'MASTER'
 
 def generate_room_code():
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(5))

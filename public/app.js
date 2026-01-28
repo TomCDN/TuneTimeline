@@ -1258,72 +1258,86 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 
 // Update fetchNextSong to use adminTracks if available
 async function fetchNextSong() {
-    let query = "";
+    console.log("Fetching next song...");
     let retryCount = 0;
-    const maxRetries = 20;
+    const maxRetries = 10; // Fewer retries of the whole function, we'll loop inside instead
 
-    // Helper to check if song is already played (using full history)
     const isPlayed = (artist, title) => {
-        const check = (t) => t.artist.toLowerCase().includes(artist.toLowerCase()) ||
-            t.title.toLowerCase().includes(title.toLowerCase()) ||
-            (artist.toLowerCase().includes(t.artist.toLowerCase()) && title.toLowerCase().includes(t.title.toLowerCase()));
-
-        // Check full room history + current song to be safe
-        const inHistory = roomHistory.some(check);
-
-        // Also check if it's the current song (not yet in history potentially)
-        const isCurrent = currentSongData && (
-            currentSongData.artist.toLowerCase().includes(artist.toLowerCase()) ||
-            currentSongData.title.toLowerCase().includes(title.toLowerCase())
+        const cleanA = artist.toLowerCase().trim();
+        const cleanT = title.toLowerCase().trim();
+        return roomHistory.some(h =>
+            (h.artist.toLowerCase().trim() === cleanA && h.title.toLowerCase().trim() === cleanT) ||
+            (h.title.toLowerCase().trim() === cleanT && cleanA.includes(h.artist.toLowerCase().trim()))
         );
-
-        return inHistory || isCurrent;
     };
 
     while (retryCount < maxRetries) {
+        let query = "";
         if (adminTracks.length > 0) {
-            const randomTrack = adminTracks[Math.floor(Math.random() * adminTracks.length)];
+            // Pick 5 random tracks from admin list and try them one by one
+            const candidates = [];
+            for (let i = 0; i < 5; i++) candidates.push(adminTracks[Math.floor(Math.random() * adminTracks.length)]);
 
-            // Pre-check against played songs if possible (fuzzy)
-            if (isPlayed(randomTrack.artist, randomTrack.name)) {
-                console.log("Skipping duplicate:", randomTrack.name);
-                retryCount++;
-                continue;
+            for (const track of candidates) {
+                if (isPlayed(track.artist, track.name)) continue;
+                query = `${track.artist} ${track.name}`;
+
+                try {
+                    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=15`);
+                    const data = await response.json();
+                    const results = data.results.filter(t => t.previewUrl);
+
+                    // Look through ALL results from iTunes instead of just the first one
+                    const validTrack = results.find(t => !isPlayed(t.artistName, t.trackName));
+
+                    if (validTrack) {
+                        const songData = {
+                            title: validTrack.trackName,
+                            artist: validTrack.artistName,
+                            year: new Date(validTrack.releaseDate).getFullYear(),
+                            url: validTrack.previewUrl
+                        };
+                        socket.emit('game-action', { roomCode: myRoomCode, action: 'play-song', data: songData });
+                        return; // Success!
+                    }
+                } catch (e) {
+                    console.error("iTunes fetch error:", e);
+                }
             }
-            query = `${randomTrack.artist} ${randomTrack.name}`;
         } else {
-            const genres = ['pop', 'rock', '80s', '90s', 'classic', 'top hits'];
+            // Fallback to random genres
+            const genres = ['80s hits', '90s hits', '00s hits', '2010s hits', 'pop music', 'rock legends'];
             query = genres[Math.floor(Math.random() * genres.length)];
+
+            try {
+                const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50`);
+                const data = await response.json();
+                const results = data.results.filter(t => t.previewUrl);
+
+                // Shuffle results to get more variety
+                const shuffled = results.sort(() => 0.5 - Math.random());
+                const validTrack = shuffled.find(t => !isPlayed(t.artistName, t.trackName));
+
+                if (validTrack) {
+                    const songData = {
+                        title: validTrack.trackName,
+                        artist: validTrack.artistName,
+                        year: new Date(validTrack.releaseDate).getFullYear(),
+                        url: validTrack.previewUrl
+                    };
+                    socket.emit('game-action', { roomCode: myRoomCode, action: 'play-song', data: songData });
+                    return;
+                }
+            } catch (e) {
+                console.error("iTunes random fetch error:", e);
+            }
         }
 
-        break; // Query selected
+        retryCount++;
     }
 
-    try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`);
-        const data = await response.json();
-        const results = data.results.filter(t => t.previewUrl);
-        if (results.length === 0) return fetchNextSong(); // Retry
-
-        const track = results[0];
-
-        // Double check the actual result from iTunes
-        if (isPlayed(track.artistName, track.trackName)) {
-            console.log("Skipping iTunes duplicate:", track.trackName);
-            if (retryCount < maxRetries) return fetchNextSong();
-        }
-
-        const songData = {
-            title: track.trackName,
-            artist: track.artistName,
-            year: new Date(track.releaseDate).getFullYear(),
-            url: track.previewUrl
-        };
-
-        socket.emit('game-action', { roomCode: myRoomCode, action: 'play-song', data: songData });
-    } catch (err) {
-        console.error("Failed to fetch song:", err);
-    }
+    console.error("Could not find a new song after many attempts.");
+    showNotification("Fout", "Kon geen nieuw nummer vinden. Probeer het opnieuw.");
 }
 
 // --- Debug / State Monitor ---
