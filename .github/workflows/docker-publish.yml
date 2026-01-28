@@ -7,7 +7,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Use lowercase for the image name to avoid case-sensitivity issues
+  IMAGE_NAME: hitster-online
 
 jobs:
   build-and-push:
@@ -31,7 +32,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -44,6 +49,11 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: self-hosted
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      # This is for the docker-compose.prod.yml image reference
+      GITHUB_REPOSITORY_LOWER: ${{ github.repository_owner }}/hitster-online
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,7 +67,6 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
-          # Use a lowercase version of the repo name for the image
-          export GITHUB_REPOSITORY_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          # Use the environment variables set at the job level
           docker compose -f docker-compose.prod.yml pull
           docker compose -f docker-compose.prod.yml up -d
