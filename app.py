@@ -619,4 +619,4 @@ def handle_disconnect():
 if __name__ == '__main__':
     # Use environment variable to toggle debug mode, default to False for safety
     is_debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
-    socketio.run(app, debug=is_debug, port=3000)
+    socketio.run(app, debug=is_debug, port=3000, host='0.0.0.0')
