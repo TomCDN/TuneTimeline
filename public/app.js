@@ -11,6 +11,25 @@ if (typeof io === 'undefined') {
     diagnosticDiv.innerHTML = "JS: Loaded | Lib: OK | Socket: Init...";
 }
 
+// --- GLOBAL ERROR LOGGING (For iPad Debugging) ---
+window.onerror = function (msg, url, line, col, error) {
+    if (diagnosticDiv) {
+        diagnosticDiv.style.background = "rgba(255,0,0,0.8)";
+        diagnosticDiv.innerHTML = `ERR: ${msg} <br> Line: ${line}`;
+    }
+    return false;
+};
+
+function logToOverlay(msg) {
+    if (diagnosticDiv) {
+        const timestamp = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        diagnosticDiv.innerHTML += ` <br> [${timestamp}] ${msg}`;
+        // Limit lines
+        const lines = diagnosticDiv.innerHTML.split('<br>');
+        if (lines.length > 5) diagnosticDiv.innerHTML = lines.slice(-5).join('<br>');
+    }
+}
+
 // Elements
 const lobbyScreen = document.getElementById('lobby-screen');
 const waitingScreen = document.getElementById('waiting-screen');
@@ -339,18 +358,22 @@ socket.on('game-reset', () => {
 
 // Lobby Actions (fix alerts)
 createBtn.addEventListener('click', () => {
+    logToOverlay("Click: Create Party");
     unlockAudio();
     myName = usernameInput.value.trim();
     if (!myName) return showNotification("Oeps", "Vul eerst een naam in!");
     isHost = true;
+    logToOverlay(`Emit: create-room (${myName})`);
     socket.emit('create-room', myName);
 });
 
 joinBtn.addEventListener('click', () => {
+    logToOverlay("Click: Join Party");
     unlockAudio();
     myName = usernameInput.value.trim();
     const code = roomInput.value.trim().toUpperCase();
     if (!myName || !code) return showNotification("Oeps", "Vul naam en room code in!");
+    logToOverlay(`Emit: join-room (${code})`);
     socket.emit('join-room', { roomCode: code, userName: myName });
 });
 
@@ -519,6 +542,7 @@ joinTeamBtns.forEach(btn => {
 
 // --- Socket Events ---
 socket.on('room-created', ({ roomCode, userName }) => {
+    logToOverlay(`Recv: room-created (${roomCode})`);
     myRoomCode = roomCode;
     displayRoomCode.innerText = roomCode;
     startBtn.classList.remove('hidden');
@@ -527,6 +551,7 @@ socket.on('room-created', ({ roomCode, userName }) => {
 });
 
 socket.on('playlist-loaded', ({ count, tracks }) => {
+    logToOverlay(`Recv: playlist-loaded (${count})`);
     adminTracks = tracks;
     loadPlaylistBtn.innerText = "Load";
     loadPlaylistBtn.disabled = false;
