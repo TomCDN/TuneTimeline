@@ -26,14 +26,28 @@ const layoutToggleBtn = document.getElementById('layout-toggle-btn');
 const revealBtn = document.getElementById('reveal-btn');
 const hostControls = document.getElementById('host-controls');
 
-// Robust Socket.IO initialization for mobile/tablets
+// Robust Socket.IO initialization with improved mobile settings
 const socket = io({
-    transports: ['polling', 'websocket'], // Allow falling back to polling if websocket fails
+    transports: ['websocket', 'polling'], // Prefer WebSockets, fall back to polling
+    upgrade: true,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    reconnectionAttempts: Infinity
+    reconnectionAttempts: Infinity,
+    timeout: 20000, // Longer timeout for mobile networks
+    forceNew: true
 });
+
+// --- Connection UI status ---
+const connStatus = document.createElement('div');
+connStatus.style.cssText = "position: fixed; bottom: 5px; right: 5px; font-size: 10px; padding: 2px 5px; border-radius: 3px; z-index: 10000; opacity: 0.6; pointer-events: none;";
+document.body.appendChild(connStatus);
+
+function updateConnStatus(status, color) {
+    connStatus.textContent = `Socket: ${status}`;
+    connStatus.style.background = color;
+    connStatus.style.color = "white";
+}
 
 socket.on('connect_error', (err) => {
     console.error("Socket connection error:", err);
@@ -49,6 +63,15 @@ socket.on('connect', () => {
     const errorEl = document.getElementById('conn-error');
     if (errorEl) errorEl.remove();
     console.log("Connected to server!");
+    updateConnStatus("Connected", "green");
+});
+
+socket.on('reconnecting', (attempt) => {
+    updateConnStatus(`Reconnecting (${attempt})...`, "orange");
+});
+
+socket.on('disconnect', (reason) => {
+    updateConnStatus(`Disconnected: ${reason}`, "red");
 });
 
 socket.on('error-msg', (msg) => {
