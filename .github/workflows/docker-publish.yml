@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Use lowercase for the image name to avoid case-sensitivity issues
+  # Base name for the image
   IMAGE_NAME: hitster-online
 
 jobs:
@@ -21,6 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Lowercase repository information
+        run: |
+          echo "IMAGE_PATH=$(echo ${{ github.repository_owner }}/${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -32,7 +36,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PATH }}
           tags: |
             type=ref,event=branch
             type=sha,prefix=
@@ -52,11 +56,13 @@ jobs:
     env:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-      # This is for the docker-compose.prod.yml image reference
-      GITHUB_REPOSITORY_LOWER: ${{ github.repository_owner }}/hitster-online
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Lowercase repository information
+        run: |
+          echo "GITHUB_REPOSITORY_LOWER=$(echo ${{ github.repository_owner }}/${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
