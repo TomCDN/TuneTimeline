@@ -1,4 +1,38 @@
-const socket = io();
+// Elements
+const lobbyScreen = document.getElementById('lobby-screen');
+const waitingScreen = document.getElementById('waiting-screen');
+const gameScreen = document.getElementById('game-screen');
+const usernameInput = document.getElementById('username-input');
+const roomInput = document.getElementById('room-input');
+const createBtn = document.getElementById('create-btn');
+const joinBtn = document.getElementById('join-btn');
+const gameOverScreen = document.getElementById('game-over-screen');
+const playAgainBtn = document.getElementById('play-again-btn');
+const startBtn = document.getElementById('start-btn');
+const displayRoomCode = document.getElementById('display-room-code');
+const gameRoomCode = document.getElementById('game-room-code');
+const audioEl = document.getElementById('game-audio');
+const guessArea = document.getElementById('hitster-guess-area');
+const guessArtistInput = document.getElementById('guess-artist');
+const guessTitleInput = document.getElementById('guess-title');
+const claimTokenBtn = document.getElementById('claim-token-btn');
+const targetScoreInput = document.getElementById('target-score-input');
+const hostSettings = document.getElementById('host-settings');
+const team1NameInput = document.getElementById('team1-name-input');
+const team2NameInput = document.getElementById('team2-name-input');
+const joinTeamBtns = document.querySelectorAll('.join-team-btn');
+const confirmPlacementBtn = document.getElementById('confirm-placement-btn');
+const layoutToggleBtn = document.getElementById('layout-toggle-btn');
+const revealBtn = document.getElementById('reveal-btn');
+const hostControls = document.getElementById('host-controls');
+
+// Robust Socket.IO initialization for mobile/tablets
+const socket = io({
+    transports: ['polling', 'websocket'], // Start with polling for better compatibility
+    upgrade: true,
+    reconnection: true,
+    reconnectionAttempts: 10
+});
 
 socket.on('connect_error', (err) => {
     console.error("Socket connection error:", err);
@@ -20,8 +54,6 @@ socket.on('error-msg', (msg) => {
     showNotification("Fout", msg);
 });
 
-const revealBtn = document.getElementById('reveal-btn');
-const hostControls = document.getElementById('host-controls');
 
 // State
 let myRoomCode = null;
@@ -42,38 +74,24 @@ let teamVotes = {}; // { sid: pos } - votes from my team
 let myVote = null; // My current vote position
 let hasVoted = false;
 
-// Elements
-const lobbyScreen = document.getElementById('lobby-screen');
-const waitingScreen = document.getElementById('waiting-screen');
-const gameScreen = document.getElementById('game-screen');
-const usernameInput = document.getElementById('username-input');
-const roomInput = document.getElementById('room-input');
-const createBtn = document.getElementById('create-btn');
-const joinBtn = document.getElementById('join-btn');
-const gameOverScreen = document.getElementById('game-over-screen');
-const playAgainBtn = document.getElementById('play-again-btn');
-const startBtn = document.getElementById('start-btn');
-const playerList = document.getElementById('player-list');
-const displayRoomCode = document.getElementById('display-room-code');
-const gameRoomCode = document.getElementById('game-room-code');
-const currentPlayerName = document.getElementById('current-player-name');
-const audioEl = document.getElementById('game-audio');
-const guessArea = document.getElementById('hitster-guess-area');
-const guessArtistInput = document.getElementById('guess-artist');
-const guessTitleInput = document.getElementById('guess-title');
-const claimTokenBtn = document.getElementById('claim-token-btn');
-const targetScoreInput = document.getElementById('target-score-input');
-const hostSettings = document.getElementById('host-settings');
-
-// Team Elements
+// --- iOS Audio Autoplay Unlock ---
+let audioUnlocked = false;
+function unlockAudio() {
+    if (audioUnlocked) return;
+    if (!audioEl) return;
+    console.log("Unlocking audio for iOS...");
+    audioEl.play().then(() => {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+        audioUnlocked = true;
+        console.log("Audio successfully unlocked!");
+    }).catch(err => {
+        console.warn("Audio unlock failed (user interaction needed):", err);
+    });
+}
 const team1List = document.getElementById('team1-list');
 const team2List = document.getElementById('team2-list');
 const unassignedList = document.getElementById('unassigned-list');
-const team1NameInput = document.getElementById('team1-name-input');
-const team2NameInput = document.getElementById('team2-name-input');
-const joinTeamBtns = document.querySelectorAll('.join-team-btn');
-const confirmPlacementBtn = document.getElementById('confirm-placement-btn');
-const layoutToggleBtn = document.getElementById('layout-toggle-btn');
 
 // --- Layout Persistence ---
 const savedLayout = localStorage.getItem('gameLayout') || 'mobile';
@@ -287,6 +305,7 @@ socket.on('game-reset', () => {
 
 // Lobby Actions (fix alerts)
 createBtn.addEventListener('click', () => {
+    unlockAudio();
     myName = usernameInput.value.trim();
     if (!myName) return showNotification("Oeps", "Vul eerst een naam in!");
     isHost = true;
@@ -294,6 +313,7 @@ createBtn.addEventListener('click', () => {
 });
 
 joinBtn.addEventListener('click', () => {
+    unlockAudio();
     myName = usernameInput.value.trim();
     const code = roomInput.value.trim().toUpperCase();
     if (!myName || !code) return showNotification("Oeps", "Vul naam en room code in!");
@@ -768,7 +788,12 @@ socket.on('new-song', ({ songData, activeTeam: serverActiveTeam, turnState: serv
     hasVoted = false;
 
     audioEl.src = songData.url;
-    audioEl.play();
+    audioEl.play().catch(err => {
+        console.warn("Autoplay blocked or failed:", err);
+        // On iOS, sometimes the first "unlock" isn't enough if much time has passed.
+        // Show a temporary play button overlay if blocked.
+        document.getElementById('song-msg').innerHTML = `${teamsData[activeTeam].name}'s Turn <br> <button onclick="audioEl.play(); this.remove();" class="primary-btn" style="width:auto; margin-top:10px; display:inline-flex;">▶️ Play Song</button>`;
+    });
 
     document.getElementById('song-msg').innerText = `${teamsData[activeTeam].name}'s Turn: Where does this fit?`;
 
