@@ -1,0 +1,10 @@
+services:
+  tune-timeline:
+    image: ghcr.io/${GITHUB_REPOSITORY_LOWER}:latest
+    ports:
+      - "4000:3000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FLASK_DEBUG=false
+    restart: unless-stopped
