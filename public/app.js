@@ -880,8 +880,68 @@ function renderChallengeInterface() {
     };
 }
 
+socket.on('start-ready-phase', () => {
+    logToOverlay("Ready Phase Started");
+
+    const container = document.createElement('div');
+    container.style.textAlign = 'center';
+
+    const msg = document.createElement('p');
+    msg.id = 'ready-status-text';
+    msg.innerHTML = "Iedereen moet op de knop drukken om de muziek te activeren.<br><br><b>Klaar voor de start?</b>";
+    container.appendChild(msg);
+
+    const btn = document.createElement('button');
+    btn.id = 'vote-to-start-btn';
+    btn.className = 'primary-btn';
+    btn.style.marginTop = '15px';
+    btn.textContent = 'Vote to Start';
+    btn.onclick = () => {
+        logToOverlay("Click: Vote to Start");
+        unlockAudio();
+        socket.emit('game-action', { roomCode: myRoomCode, action: 'player-ready' });
+
+        btn.disabled = true;
+        btn.textContent = "Waiting for the other players...";
+        btn.style.opacity = '0.7';
+    };
+    container.appendChild(btn);
+
+    modal.show("ARE YOU READY!?", container);
+
+    const modalConfirm = document.getElementById('modal-confirm-btn');
+    if (modalConfirm) modalConfirm.classList.add('hidden');
+});
+
+socket.on('ready-progress', ({ readyCount, totalPlayers }) => {
+    const statusText = document.getElementById('ready-status-text');
+    if (statusText) {
+        statusText.innerHTML = `Iedereen moet op de knop drukken om de muziek te activeren.<br><br><b>Status: ${readyCount} / ${totalPlayers} spelers klaar.</b>`;
+    }
+});
+
 
 socket.on('game-started', async () => {
+    logToOverlay("Game Started! 🚀");
+
+    // Perform countdown inside the modal button if it exists
+    const btn = document.getElementById('vote-to-start-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '1';
+        btn.style.background = 'var(--primary)';
+
+        btn.textContent = "3...";
+        await new Promise(r => setTimeout(r, 1000));
+        btn.textContent = "2...";
+        await new Promise(r => setTimeout(r, 1000));
+        btn.textContent = "1...";
+        await new Promise(r => setTimeout(r, 1000));
+        btn.textContent = "START!";
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    modal.hide();
     gameRoomCode.innerText = myRoomCode;
     showScreen(gameScreen);
 

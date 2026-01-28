@@ -244,7 +244,8 @@ def handle_create_room(user_name):
         'target_score': 10,
         'token_claimed': False,
         'history': [],
-        'playlist_tracks': []
+        'playlist_tracks': [],
+        'ready_players': set()
     }
     
     # Auto-load default playlist
@@ -365,10 +366,13 @@ def handle_game_action(data):
         return
     
     if action == 'start-game':
-        room['game_state'] = 'playing'
+        # Trigger ready phase for everyone to unlock audio
+        room['game_state'] = 'ready'
+        room['ready_players'] = set()
+        
+        # Reset game states early so UI reflects new game
         room['active_team'] = 'team1'
-        room['turn_state'] = 'playing' # playing, challenging, result
-        # Initial timelines
+        room['turn_state'] = 'playing'
         for t in room['teams'].values():
             t['timeline'] = []
             t['score'] = 0
@@ -376,7 +380,23 @@ def handle_game_action(data):
             t['votes'] = {}
         
         sync_room_state(room_code)
-        emit('game-started', to=room_code)
+        emit('start-ready-phase', to=room_code)
+
+    elif action == 'player-ready':
+        room['ready_players'].add(request.sid)
+        ready_count = len(room['ready_players'])
+        total_players = len(room['players'])
+        
+        print(f"Player {request.sid} ready in {room_code}. Total: {ready_count}/{total_players}")
+        
+        if ready_count >= total_players:
+            # Everyone is ready! Start the actual game.
+            room['game_state'] = 'playing'
+            sync_room_state(room_code)
+            emit('game-started', to=room_code)
+        else:
+            # Update others on progress (optional but nice)
+            emit('ready-progress', {'readyCount': ready_count, 'totalPlayers': total_players}, to=room_code)
 
     elif action == 'init-starter-cards':
         room['teams']['team1']['timeline'] = [action_data['team1Song']]
