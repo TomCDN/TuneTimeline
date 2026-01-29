@@ -326,6 +326,7 @@ const modal = {
             this.message.innerHTML = msg; // allow HTML for static messages
         }
         this.overlay.classList.remove('hidden');
+        this.confirmBtn.classList.remove('hidden'); // Ensure button is visible
 
         // Risky: clones remove listeners, but better for simple logic
         const newConfirm = this.confirmBtn.cloneNode(true);
