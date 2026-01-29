@@ -19,7 +19,10 @@ diagnosticDiv.innerHTML = `
     <div style="display:flex; flex-direction:column; gap:5px; border-top:1px solid #444; margin-top:6px; padding-top:6px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:9px; color:#888;">Test System</span>
-            <button id="diag-conn-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">CHECK CONN 🌐</button>
+            <div style="display:flex; gap:3px;">
+                <button id="diag-beep-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">BEEP 🔔</button>
+                <button id="diag-conn-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">CONN 🌐</button>
+            </div>
         </div>
         <button id="diag-unlock-btn" style="background:var(--primary); color:white; border:none; font-size:10px; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%;">FORCE UNLOCK 🔊</button>
     </div>
@@ -90,6 +93,31 @@ document.getElementById('diag-conn-btn').onclick = async () => {
         logToOverlay("Check if iPad blocks outside URLs.");
     }
 };
+
+document.getElementById('diag-beep-btn').onclick = () => {
+    logToOverlay("Manual Beep requested...");
+    playBeep(true);
+};
+
+function playBeep(audible = false) {
+    try {
+        if (!audioCtx || audioCtx.state !== 'running') {
+            logToOverlay("Beep: Context not running ❌");
+            return;
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(audible ? 0.05 : 0, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+        if (audible) logToOverlay("Beep: SENT 🔔");
+    } catch (e) {
+        logToOverlay(`Beep Error: ${e.message}`);
+    }
+}
 
 // Elements
 const lobbyScreen = document.getElementById('lobby-screen');
@@ -276,12 +304,23 @@ function unlockAudio() {
             audioUnlocked = true;
             updateAudioStatus("OK ✅", "#00ff00");
             logToOverlay("Audio: SUPER-UNLOCKED ✅");
+            // Play a very short audible beep to confirm blessing
+            playBeep(true);
         }).catch(err => {
             updateAudioStatus("Locked 🔒", "#ffcc00");
             logToOverlay(`Audio: Prime FAILED (${err.name})`);
         });
     }, 50);
 }
+
+// Monitoring: Log context state periodically
+setInterval(() => {
+    if (audioCtx) {
+        if (audioCtx.state !== 'running') {
+            logToOverlay(`AudioCtx State: ${audioCtx.state} ⚠️`);
+        }
+    }
+}, 5000);
 // (Moved up)
 
 // --- Layout Persistence ---
