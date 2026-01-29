@@ -215,13 +215,12 @@ let roomHistory = [];
 let teamVotes = {}; // { sid: pos } - votes from my team
 let myVote = null; // My current vote position
 let hasVoted = false;
+let isCountingDown = false;
 
 // --- iOS Audio Autoplay Unlock ---
 let audioUnlocked = false;
 let audioCtx = null;
-
-// Standard 1-second silent MP3 to "prime" the HTML5 audio element
-const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQyAABUWFhYAAAAEAAAA2VuY29kZXIATGF2ZWY1OC4yOS4xMDAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+let heartbeatOsc = null;
 
 function unlockAudio() {
     if (audioUnlocked) {
@@ -247,25 +246,38 @@ function unlockAudio() {
         } else {
             logToOverlay(`AudioContext: ${audioCtx.state}`);
         }
+
+        // Heartbeat: Continuous silent oscillator to keep the context active
+        if (!heartbeatOsc && audioCtx.state === 'running') {
+            heartbeatOsc = audioCtx.createOscillator();
+            heartbeatOsc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Silent
+            heartbeatOsc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            heartbeatOsc.start();
+            logToOverlay("Audio: Heartbeat started 💓");
+        }
     } catch (e) {
         logToOverlay(`AudioContext: Error (${e.name})`);
     }
 
-    // 2. HTML5 Audio Priming (MP3)
+    // 2. HTML5 Audio Priming (Better approach without AbortError)
     audioEl.muted = false;
     audioEl.volume = 1.0;
-    audioEl.src = SILENT_MP3;
-    audioEl.load();
 
-    audioEl.play().then(() => {
-        audioUnlocked = true;
-        updateAudioStatus("OK ✅", "#00ff00");
-        logToOverlay("Audio: SUPER-UNLOCKED ✅ (MP3 + WebAudio)");
-    }).catch(err => {
-        updateAudioStatus("Locked 🔒", "#ffcc00");
-        logToOverlay(`Audio: Super-Unlock FAILED (${err.name})`);
-        console.warn("Super-Unlock failed:", err);
-    });
+    // Use a very short timeout to avoid AbortError on some Safari versions
+    // when multiple play requests happen too fast
+    setTimeout(() => {
+        audioEl.play().then(() => {
+            audioUnlocked = true;
+            updateAudioStatus("OK ✅", "#00ff00");
+            logToOverlay("Audio: SUPER-UNLOCKED ✅");
+        }).catch(err => {
+            updateAudioStatus("Locked 🔒", "#ffcc00");
+            logToOverlay(`Audio: Prime FAILED (${err.name})`);
+        });
+    }, 50);
 }
 // (Moved up)
 
@@ -818,7 +830,7 @@ socket.on('room-update', (data) => {
     if (gameState === 'lobby' && waitingScreen.classList.contains('hidden')) {
         showScreen(waitingScreen);
     }
-    if (gameState === 'playing') {
+    if (gameState === 'playing' && !isCountingDown) {
         if (gameScreen.classList.contains('hidden')) showScreen(gameScreen);
         renderTimelines();
         renderChallengeInterface(); // Update interface
@@ -963,6 +975,7 @@ socket.on('ready-progress', ({ readyCount, totalPlayers }) => {
 
 socket.on('game-started', async () => {
     logToOverlay("Game Started! 🚀");
+    isCountingDown = true;
 
     // Perform countdown inside the modal button if it exists
     const btn = document.getElementById('vote-to-start-btn');
@@ -981,6 +994,7 @@ socket.on('game-started', async () => {
         await new Promise(r => setTimeout(r, 500));
     }
 
+    isCountingDown = false;
     modal.hide();
     gameRoomCode.innerText = myRoomCode;
     showScreen(gameScreen);
