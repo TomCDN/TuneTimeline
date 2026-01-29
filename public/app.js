@@ -1117,8 +1117,8 @@ socket.on('game-started', async () => {
 async function getTeamStarterSong() {
     const genres = ['classic', 'hits', 'pop', 'rock', 'dance'];
     const genre = genres[Math.floor(Math.random() * genres.length)];
-    const url = `https://itunes.apple.com/search?term=${genre}&media=music&limit=20`;
-    logToOverlay(`Host: Fetching ${genre}...`);
+    const url = `/api/proxy/itunes?term=${genre}&limit=20`;
+    logToOverlay(`Host: Fetching ${genre} (via Proxy)...`);
 
     try {
         const data = await fetchWithRetry(url);

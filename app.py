@@ -32,6 +32,18 @@ admins = set() # Store SIDs of authenticated admins
 
 ADMIN_PASSWORD = 'MASTER'
 
+@app.route('/api/proxy/itunes')
+def proxy_itunes():
+    """Proxy iTunes search requests to bypass client-side CORS/CSP blocks."""
+    term = request.args.get('term', '')
+    limit = request.args.get('limit', '20')
+    url = f"https://itunes.apple.com/search?term={term}&media=music&limit={limit}"
+    try:
+        r = requests.get(url, timeout=10)
+        return (r.text, r.status_code, [('Content-Type', 'application/json')])
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 def generate_room_code():
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
