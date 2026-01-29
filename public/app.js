@@ -265,26 +265,22 @@ function unlockAudio() {
         logToOverlay(`AudioContext: Error (${e.name})`);
     }
 
-    // 2. HTML5 Audio Priming (Crucial for iPad Safari)
-    try {
-        audioEl.muted = false;
-        audioEl.volume = 1.0;
-        audioEl.src = SILENT_MP3;
-        audioEl.load();
+    // 2. HTML5 Audio Priming (Reverting to v18 working method)
+    audioEl.muted = false;
+    audioEl.volume = 1.0;
 
-        // Play immediately within the gesture context (no timeout!)
+    // Use a very short timeout to avoid AbortError on some Safari versions
+    // when multiple play requests happen too fast. This worked perfectly in v18.
+    setTimeout(() => {
         audioEl.play().then(() => {
             audioUnlocked = true;
             updateAudioStatus("OK ✅", "#00ff00");
             logToOverlay("Audio: SUPER-UNLOCKED ✅");
         }).catch(err => {
             updateAudioStatus("Locked 🔒", "#ffcc00");
-            logToOverlay(`Audio: Play FAILED (${err.name})`);
-            console.warn("Audio unlock failed:", err);
+            logToOverlay(`Audio: Prime FAILED (${err.name})`);
         });
-    } catch (err) {
-        logToOverlay(`Audio: Prime ERROR (${err.name})`);
-    }
+    }, 50);
 }
 // (Moved up)
 
