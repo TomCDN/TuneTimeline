@@ -250,9 +250,6 @@ let audioUnlocked = false;
 let audioCtx = null;
 let heartbeatOsc = null;
 
-// Standard 1-second silent MP3 to "prime" the HTML5 audio element
-const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQyAABUWFhYAAAAEAAAA2VuY29kZXIATGF2ZWY1OC4yOS4xMDAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-
 function unlockAudio() {
     if (audioUnlocked) {
         logToOverlay("Audio: Already unlocked ✅");
@@ -264,22 +261,19 @@ function unlockAudio() {
     }
 
     updateAudioStatus("Unlocking... ⏳", "#ccff00");
-    logToOverlay("Audio: Starting Super-Unlock Flow 🔐");
+    logToOverlay("Audio: Starting Synchronous Super-Blessing ⚡");
 
     // 1. Web Audio API Blessing (Crucial for iOS)
     try {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-            logToOverlay(`AudioContext: Resumed (${audioCtx.state}) 🔊`);
-        } else {
-            logToOverlay(`AudioContext: ${audioCtx.state}`);
-        }
+        // Resume immediately
+        audioCtx.resume();
+        logToOverlay(`AudioContext: Resume called (${audioCtx.state})`);
 
         // Heartbeat: Continuous silent oscillator to keep the context active
-        if (!heartbeatOsc && audioCtx.state === 'running') {
+        if (!heartbeatOsc) {
             heartbeatOsc = audioCtx.createOscillator();
             heartbeatOsc.frequency.setValueAtTime(440, audioCtx.currentTime);
             const gainNode = audioCtx.createGain();
@@ -287,8 +281,19 @@ function unlockAudio() {
             heartbeatOsc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             heartbeatOsc.start();
-            logToOverlay("Audio: Heartbeat started 💓");
+            logToOverlay("Audio: Heartbeat active 💓");
         }
+
+        // Play an immediate audible beep to LOCK in the blessing
+        const osc = audioCtx.createOscillator();
+        const feedbackGain = audioCtx.createGain();
+        osc.connect(feedbackGain);
+        feedbackGain.connect(audioCtx.destination);
+        feedbackGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+        logToOverlay("Audio: Confirmation BEEP sent 🔔");
     } catch (e) {
         logToOverlay(`AudioContext: Error (${e.name})`);
     }
@@ -297,20 +302,15 @@ function unlockAudio() {
     audioEl.muted = false;
     audioEl.volume = 1.0;
 
-    // Use a very short timeout to avoid AbortError on some Safari versions
-    // when multiple play requests happen too fast. This worked perfectly in v18.
-    setTimeout(() => {
-        audioEl.play().then(() => {
-            audioUnlocked = true;
-            updateAudioStatus("OK ✅", "#00ff00");
-            logToOverlay("Audio: SUPER-UNLOCKED ✅");
-            // Play a very short audible beep to confirm blessing
-            playBeep(true);
-        }).catch(err => {
-            updateAudioStatus("Locked 🔒", "#ffcc00");
-            logToOverlay(`Audio: Prime FAILED (${err.name})`);
-        });
-    }, 50);
+    // NO setTimeout here - we must stay within the user gesture window!
+    audioEl.play().then(() => {
+        audioUnlocked = true;
+        updateAudioStatus("OK ✅", "#00ff00");
+        logToOverlay("Audio: HTML5 BLESSED ✅");
+    }).catch(err => {
+        updateAudioStatus("Locked 🔒", "#ffcc00");
+        logToOverlay(`Audio: HTML5 FAILED (${err.name})`);
+    });
 }
 
 // Monitoring: Log context state periodically
