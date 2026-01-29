@@ -133,7 +133,6 @@ const startBtn = document.getElementById('start-btn');
 const displayRoomCode = document.getElementById('display-room-code');
 const gameRoomCode = document.getElementById('game-room-code');
 const audioEl = document.getElementById('game-audio');
-audioEl.crossOrigin = "anonymous"; // Try to allow Web Audio graph if needed later
 
 // Detailed diagnostics for iPad audio state
 audioEl.addEventListener('error', () => {
@@ -317,8 +316,6 @@ function unlockAudio() {
     try {
         audioEl.muted = false;
         audioEl.volume = 1.0;
-        audioEl.src = SILENT_MP3;
-        audioEl.load();
 
         // NO setTimeout here - we must stay within the user gesture window!
         audioEl.play().then(() => {
@@ -326,8 +323,16 @@ function unlockAudio() {
             updateAudioStatus("OK ✅", "#00ff00");
             logToOverlay("Audio: HTML5 BLESSED ✅");
         }).catch(err => {
-            updateAudioStatus("Locked 🔒", "#ffcc00");
-            logToOverlay(`Audio: HTML5 FAILED (${err.name})`);
+            // On iOS, if play() is interrupted by the next song load, it throws AbortError.
+            // But the gesture was successful, so the element is still blessed!
+            if (err.name === 'AbortError') {
+                audioUnlocked = true;
+                updateAudioStatus("OK ✅", "#00ff00");
+                logToOverlay("Audio: HTML5 BLESSED (Interrupted) ✅");
+            } else {
+                updateAudioStatus("Locked 🔒", "#ffcc00");
+                logToOverlay(`Audio: HTML5 FAILED (${err.name})`);
+            }
         });
     } catch (e) {
         logToOverlay(`Audio: Prime Error (${e.name})`);
