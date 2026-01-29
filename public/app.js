@@ -222,6 +222,9 @@ let audioUnlocked = false;
 let audioCtx = null;
 let heartbeatOsc = null;
 
+// Standard 1-second silent MP3 to "prime" the HTML5 audio element
+const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQyAABUWFhYAAAAEAAAA2VuY29kZXIATGF2ZWY1OC4yOS4xMDAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+
 function unlockAudio() {
     if (audioUnlocked) {
         logToOverlay("Audio: Already unlocked ✅");
@@ -262,22 +265,26 @@ function unlockAudio() {
         logToOverlay(`AudioContext: Error (${e.name})`);
     }
 
-    // 2. HTML5 Audio Priming (Better approach without AbortError)
-    audioEl.muted = false;
-    audioEl.volume = 1.0;
+    // 2. HTML5 Audio Priming (Crucial for iPad Safari)
+    try {
+        audioEl.muted = false;
+        audioEl.volume = 1.0;
+        audioEl.src = SILENT_MP3;
+        audioEl.load();
 
-    // Use a very short timeout to avoid AbortError on some Safari versions
-    // when multiple play requests happen too fast
-    setTimeout(() => {
+        // Play immediately within the gesture context (no timeout!)
         audioEl.play().then(() => {
             audioUnlocked = true;
             updateAudioStatus("OK ✅", "#00ff00");
             logToOverlay("Audio: SUPER-UNLOCKED ✅");
         }).catch(err => {
             updateAudioStatus("Locked 🔒", "#ffcc00");
-            logToOverlay(`Audio: Prime FAILED (${err.name})`);
+            logToOverlay(`Audio: Play FAILED (${err.name})`);
+            console.warn("Audio unlock failed:", err);
         });
-    }, 50);
+    } catch (err) {
+        logToOverlay(`Audio: Prime ERROR (${err.name})`);
+    }
 }
 // (Moved up)
 
