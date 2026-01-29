@@ -133,6 +133,18 @@ const startBtn = document.getElementById('start-btn');
 const displayRoomCode = document.getElementById('display-room-code');
 const gameRoomCode = document.getElementById('game-room-code');
 const audioEl = document.getElementById('game-audio');
+audioEl.crossOrigin = "anonymous"; // Try to allow Web Audio graph if needed later
+
+// Detailed diagnostics for iPad audio state
+audioEl.addEventListener('error', () => {
+    const err = audioEl.error;
+    logToOverlay(`audioEl Error: ${err ? err.code : '?'}`);
+    if (err && err.code === 4) logToOverlay("-> SRC_NOT_SUPPORTED (Check URL/network)");
+});
+audioEl.addEventListener('stalled', () => logToOverlay("audioEl: Stalled... ⏳"));
+audioEl.addEventListener('waiting', () => logToOverlay("audioEl: Waiting for data... ⏳"));
+audioEl.addEventListener('canplay', () => logToOverlay("audioEl: Can play! ✅"));
+audioEl.addEventListener('playing', () => logToOverlay("audioEl: Playing started 🔊"));
 const guessArea = document.getElementById('hitster-guess-area');
 const guessArtistInput = document.getElementById('guess-artist');
 const guessTitleInput = document.getElementById('guess-title');
@@ -250,6 +262,9 @@ let audioUnlocked = false;
 let audioCtx = null;
 let heartbeatOsc = null;
 
+// Standard 1-second silent MP3 to "prime" the HTML5 audio element
+const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQyAABUWFhYAAAAEAAAA2VuY29kZXIATGF2ZWY1OC4yOS4xMDAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+
 function unlockAudio() {
     if (audioUnlocked) {
         logToOverlay("Audio: Already unlocked ✅");
@@ -298,19 +313,25 @@ function unlockAudio() {
         logToOverlay(`AudioContext: Error (${e.name})`);
     }
 
-    // 2. HTML5 Audio Priming (Reverting to v18 working method)
-    audioEl.muted = false;
-    audioEl.volume = 1.0;
+    // 2. HTML5 Audio Priming (IMMEDIATE)
+    try {
+        audioEl.muted = false;
+        audioEl.volume = 1.0;
+        audioEl.src = SILENT_MP3;
+        audioEl.load();
 
-    // NO setTimeout here - we must stay within the user gesture window!
-    audioEl.play().then(() => {
-        audioUnlocked = true;
-        updateAudioStatus("OK ✅", "#00ff00");
-        logToOverlay("Audio: HTML5 BLESSED ✅");
-    }).catch(err => {
-        updateAudioStatus("Locked 🔒", "#ffcc00");
-        logToOverlay(`Audio: HTML5 FAILED (${err.name})`);
-    });
+        // NO setTimeout here - we must stay within the user gesture window!
+        audioEl.play().then(() => {
+            audioUnlocked = true;
+            updateAudioStatus("OK ✅", "#00ff00");
+            logToOverlay("Audio: HTML5 BLESSED ✅");
+        }).catch(err => {
+            updateAudioStatus("Locked 🔒", "#ffcc00");
+            logToOverlay(`Audio: HTML5 FAILED (${err.name})`);
+        });
+    } catch (e) {
+        logToOverlay(`Audio: Prime Error (${e.name})`);
+    }
 }
 
 // Monitoring: Log context state periodically
@@ -1091,13 +1112,17 @@ socket.on('new-song', ({ songData, activeTeam: serverActiveTeam, turnState: serv
     hasVoted = false;
 
     logToOverlay(`Song: ${songData.artist} - ${songData.title}`);
+    logToOverlay(`Source: ${songData.url.substring(0, 40)}...`);
+
     audioEl.src = songData.url;
     audioEl.load(); // Force load on mobile
+
+    logToOverlay(`audioEl state: rS=${audioEl.readyState}, nS=${audioEl.networkState}`);
 
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
         playPromise.then(() => {
-            logToOverlay("Audio: Playing! 🎶");
+            logToOverlay("Audio: Playing SUCCESS! 🎶");
             document.getElementById('song-msg').innerText = `${teamsData[activeTeam].name}'s Turn: Where does this fit?`;
         }).catch(err => {
             logToOverlay("Audio: BLOCKED ⏸️ (Play manually)");
