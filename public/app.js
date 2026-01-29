@@ -218,8 +218,10 @@ let hasVoted = false;
 
 // --- iOS Audio Autoplay Unlock ---
 let audioUnlocked = false;
-// 1 second of silence to "prime" the hardware
-const SILENT_TRACK = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== "; // Extremely short silent WAV
+let audioCtx = null;
+
+// Standard 1-second silent MP3 to "prime" the HTML5 audio element
+const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQyAABUWFhYAAAAEAAAA2VuY29kZXIATGF2ZWY1OC4yOS4xMDAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
 
 function unlockAudio() {
     if (audioUnlocked) {
@@ -232,20 +234,37 @@ function unlockAudio() {
     }
 
     updateAudioStatus("Unlocking... ⏳", "#ccff00");
-    logToOverlay("Audio: Priming with silent track...");
+    logToOverlay("Audio: Starting Super-Unlock Flow 🔐");
 
-    // Set silent source to "start" the hardware during the user gesture
-    audioEl.src = SILENT_TRACK;
+    // 1. Web Audio API Blessing (Crucial for iOS)
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+            logToOverlay(`AudioContext: Resumed (${audioCtx.state}) 🔊`);
+        } else {
+            logToOverlay(`AudioContext: ${audioCtx.state}`);
+        }
+    } catch (e) {
+        logToOverlay(`AudioContext: Error (${e.name})`);
+    }
+
+    // 2. HTML5 Audio Priming (MP3)
+    audioEl.muted = false;
+    audioEl.volume = 1.0;
+    audioEl.src = SILENT_MP3;
     audioEl.load();
 
     audioEl.play().then(() => {
         audioUnlocked = true;
         updateAudioStatus("OK ✅", "#00ff00");
-        logToOverlay("Audio: PRIMED & UNLOCKED ✅");
+        logToOverlay("Audio: SUPER-UNLOCKED ✅ (MP3 + WebAudio)");
     }).catch(err => {
         updateAudioStatus("Locked 🔒", "#ffcc00");
-        logToOverlay(`Audio: Prime FAILED (${err.name})`);
-        console.warn("Audio unlock failed:", err);
+        logToOverlay(`Audio: Super-Unlock FAILED (${err.name})`);
+        console.warn("Super-Unlock failed:", err);
     });
 }
 // (Moved up)
