@@ -339,11 +339,14 @@ function unlockAudio() {
     }
 }
 
-// Monitoring: Log context state periodically
+// Monitoring: Log context state periodically and try to recover
 setInterval(() => {
     if (audioCtx) {
-        if (audioCtx.state !== 'running') {
-            logToOverlay(`AudioCtx State: ${audioCtx.state} ⚠️`);
+        if (audioCtx.state === 'interrupted' || audioCtx.state === 'suspended') {
+            logToOverlay(`AudioCtx: Attempting RECOVERY from ${audioCtx.state}...`);
+            audioCtx.resume().then(() => {
+                logToOverlay(`AudioCtx: Recovery ${audioCtx.state === 'running' ? 'SUCCESS' : 'STILL ' + audioCtx.state}`);
+            });
         }
     }
 }, 5000);
@@ -1069,20 +1072,24 @@ socket.on('game-started', async () => {
     showScreen(gameScreen);
 
     if (isHost) {
-        // Initialize Timelines with one card each
+        logToOverlay("Host: Game Start detected. Initializing cards...");
         try {
-            console.log("Fetching starter songs in parallel...");
             const [team1Song, team2Song] = await Promise.all([
                 getTeamStarterSong(),
                 getTeamStarterSong()
             ]);
+            logToOverlay("Host: Starter cards loaded! Emitting init...");
             socket.emit('game-action', {
                 roomCode: myRoomCode,
                 action: 'init-starter-cards',
                 data: { team1Song, team2Song }
             });
-            setTimeout(fetchNextSong, 1500); // Slightly faster delay
+            setTimeout(() => {
+                logToOverlay("Host: Triggering first song fetch...");
+                fetchNextSong();
+            }, 1500);
         } catch (err) {
+            logToOverlay(`Host ERROR: ${err.message}`);
             console.error("Failed to init starter cards:", err);
             renderTimelines();
         }
@@ -1090,21 +1097,36 @@ socket.on('game-started', async () => {
 });
 
 async function getTeamStarterSong() {
-    const genres = ['classic', 'hits', 'pop'];
+    const genres = ['classic', 'hits', 'pop', 'rock', 'dance'];
     const genre = genres[Math.floor(Math.random() * genres.length)];
-    const response = await fetch(`https://itunes.apple.com/search?term=${genre}&media=music&limit=20`);
-    const data = await response.json();
-    const results = data.results.filter(t => t.previewUrl);
-    const track = results[Math.floor(Math.random() * results.length)];
-    return {
-        title: track.trackName,
-        artist: track.artistName,
-        year: new Date(track.releaseDate).getFullYear(),
-        url: track.previewUrl
-    };
+    logToOverlay(`Host: Fetching starter (${genre})...`);
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${genre}&media=music&limit=20`);
+        const data = await response.json();
+        const results = data.results.filter(t => t.previewUrl);
+        if (results.length === 0) throw new Error("No iTunes results");
+        const track = results[Math.floor(Math.random() * results.length)];
+        logToOverlay(`Host: Starter found: ${track.trackName.substring(0, 15)}`);
+        return {
+            title: track.trackName,
+            artist: track.artistName,
+            year: new Date(track.releaseDate).getFullYear(),
+            url: track.previewUrl
+        };
+    } catch (e) {
+        logToOverlay(`Host Starter Fetch FAIL: ${e.message}`);
+        throw e;
+    }
 }
 
 socket.on('new-song', ({ songData, activeTeam: serverActiveTeam, turnState: serverTurnState }) => {
+    logToOverlay("socket: new-song RECEIVED 📩");
+
+    // Auto-recovery: If context is dead, try one more resume (sometimes works if already blessed)
+    if (audioCtx && audioCtx.state !== 'running') {
+        audioCtx.resume();
+    }
+
     activeTeam = serverActiveTeam;
     turnState = serverTurnState;
     currentSongData = songData;
