@@ -172,6 +172,21 @@ const adminTargetScore = document.getElementById('admin-target-score');
 
 let adminTracks = [];
 
+// --- Resilient Fetch Helper ---
+async function fetchWithRetry(url, options = {}, retries = 3, backoff = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, { ...options, cache: 'no-cache' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (err) {
+            logToOverlay(`Fetch Try ${i + 1} Fail: ${err.message}`);
+            if (i === retries - 1) throw err;
+            await new Promise(r => setTimeout(r, backoff * (i + 1)));
+        }
+    }
+}
+
 // --- Team/Player Elements ---
 const team1List = document.getElementById('team1-list');
 const team2List = document.getElementById('team2-list');
@@ -317,14 +332,17 @@ function unlockAudio() {
         audioEl.muted = false;
         audioEl.volume = 1.0;
 
+        // We set a tiny silent source to "prime" the element
+        // so that play() has something to resolve.
+        audioEl.src = SILENT_MP3;
+
         // NO setTimeout here - we must stay within the user gesture window!
         audioEl.play().then(() => {
             audioUnlocked = true;
             updateAudioStatus("OK ✅", "#00ff00");
             logToOverlay("Audio: HTML5 BLESSED ✅");
         }).catch(err => {
-            // On iOS, if play() is interrupted by the next song load, it throws AbortError.
-            // But the gesture was successful, so the element is still blessed!
+            // AbortError is likely just the next song interrupting our prime.
             if (err.name === 'AbortError') {
                 audioUnlocked = true;
                 updateAudioStatus("OK ✅", "#00ff00");
@@ -1099,14 +1117,15 @@ socket.on('game-started', async () => {
 async function getTeamStarterSong() {
     const genres = ['classic', 'hits', 'pop', 'rock', 'dance'];
     const genre = genres[Math.floor(Math.random() * genres.length)];
-    logToOverlay(`Host: Fetching starter (${genre})...`);
+    const url = `https://itunes.apple.com/search?term=${genre}&media=music&limit=20`;
+    logToOverlay(`Host: Fetching ${genre}...`);
+
     try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${genre}&media=music&limit=20`);
-        const data = await response.json();
+        const data = await fetchWithRetry(url);
         const results = data.results.filter(t => t.previewUrl);
-        if (results.length === 0) throw new Error("No iTunes results");
+        if (results.length === 0) throw new Error("No results");
         const track = results[Math.floor(Math.random() * results.length)];
-        logToOverlay(`Host: Starter found: ${track.trackName.substring(0, 15)}`);
+        logToOverlay(`Host: Found ${track.trackName.substring(0, 15)}`);
         return {
             title: track.trackName,
             artist: track.artistName,
@@ -1114,7 +1133,7 @@ async function getTeamStarterSong() {
             url: track.previewUrl
         };
     } catch (e) {
-        logToOverlay(`Host Starter Fetch FAIL: ${e.message}`);
+        logToOverlay(`Host Fetch FAIL: ${e.message}`);
         throw e;
     }
 }
