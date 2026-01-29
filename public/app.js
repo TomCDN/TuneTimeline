@@ -16,9 +16,12 @@ diagnosticDiv.innerHTML = `
     <div id="diag-status" style="color:#aaa">Socket: ...</div>
     <div id="diag-audio" style="color:#ffcc00; margin:3px 0; font-weight:bold;">Audio: Locked 🔒</div>
     <div id="diag-error" style="color:#ff5555; display:none; border:1px solid #ff5555; padding:4px; margin:3px 0; font-size:9px;"></div>
-    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #444; margin-top:6px; padding-top:6px;">
-        <span style="font-size:9px; color:#888;">Live Logs</span>
-        <button id="diag-unlock-btn" style="background:var(--primary); color:white; border:none; font-size:10px; padding:3px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">FORCE UNLOCK 🔊</button>
+    <div style="display:flex; flex-direction:column; gap:5px; border-top:1px solid #444; margin-top:6px; padding-top:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:9px; color:#888;">Test System</span>
+            <button id="diag-conn-btn" style="background:#444; color:white; border:1px solid #666; font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">CHECK CONN 🌐</button>
+        </div>
+        <button id="diag-unlock-btn" style="background:var(--primary); color:white; border:none; font-size:10px; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%;">FORCE UNLOCK 🔊</button>
     </div>
     <div id="diag-logs" style="max-height:120px; overflow-y:auto; line-height:1.3; margin-top:5px; font-size:9px; background:#111; padding:4px;"></div>
 `;
@@ -72,6 +75,20 @@ function updateAudioStatus(status, color) {
 document.getElementById('diag-unlock-btn').onclick = () => {
     logToOverlay("Manual unlock requested...");
     unlockAudio();
+};
+
+document.getElementById('diag-conn-btn').onclick = async () => {
+    logToOverlay("Conn Test: Fetching itunes.apple.com...");
+    try {
+        const start = Date.now();
+        // Use a tiny search query as a probe
+        const res = await fetch("https://itunes.apple.com/search?term=test&limit=1", { mode: 'no-cors' });
+        const duration = Date.now() - start;
+        logToOverlay(`Conn Test: REACHABLE (took ${duration}ms) 🌐`);
+    } catch (err) {
+        logToOverlay(`Conn Test: FAILED ❌ (${err.message})`);
+        logToOverlay("Check if iPad blocks outside URLs.");
+    }
 };
 
 // Elements
@@ -201,6 +218,9 @@ let hasVoted = false;
 
 // --- iOS Audio Autoplay Unlock ---
 let audioUnlocked = false;
+// 1 second of silence to "prime" the hardware
+const SILENT_TRACK = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== "; // Extremely short silent WAV
+
 function unlockAudio() {
     if (audioUnlocked) {
         logToOverlay("Audio: Already unlocked ✅");
@@ -212,19 +232,20 @@ function unlockAudio() {
     }
 
     updateAudioStatus("Unlocking... ⏳", "#ccff00");
-    logToOverlay("Audio: Triggering unlock play...");
-    logToOverlay(`Audio State: vol=${audioEl.volume}, muted=${audioEl.muted}, src=${audioEl.src ? 'set' : 'empty'}`);
+    logToOverlay("Audio: Priming with silent track...");
+
+    // Set silent source to "start" the hardware during the user gesture
+    audioEl.src = SILENT_TRACK;
+    audioEl.load();
 
     audioEl.play().then(() => {
-        audioEl.pause();
-        audioEl.currentTime = 0;
         audioUnlocked = true;
         updateAudioStatus("OK ✅", "#00ff00");
-        logToOverlay("Audio: UNLOCKED ✅");
+        logToOverlay("Audio: PRIMED & UNLOCKED ✅");
     }).catch(err => {
         updateAudioStatus("Locked 🔒", "#ffcc00");
-        logToOverlay(`Audio: Unlock FAILED (${err.name}: ${err.message})`);
-        console.warn("Audio unlock failed (user interaction needed):", err);
+        logToOverlay(`Audio: Prime FAILED (${err.name})`);
+        console.warn("Audio unlock failed:", err);
     });
 }
 // (Moved up)
