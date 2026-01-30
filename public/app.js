@@ -1507,15 +1507,18 @@ socket.on('vote-update', ({ teamId, votes, voterCount }) => {
     // Update UI
     renderTimelines();
 
+    // Fallback: If server didn't send voterCount (older version), calculate locally
+    const totalVoters = voterCount || (teamsData[teamId]?.players?.length) || 1;
+
     // Update confirm button
     if (confirmPlacementBtn && myTeam === activeTeam) {
-        if (voteCount >= voterCount) {
+        if (voteCount >= totalVoters) {
             // Everyone voted
             confirmPlacementBtn.disabled = false;
             confirmPlacementBtn.innerText = "✅ Bevestig Plaatsing";
         } else {
             confirmPlacementBtn.disabled = true;
-            confirmPlacementBtn.innerText = `⏳ ${voteCount}/${voterCount} stemmen...`;
+            confirmPlacementBtn.innerText = `⏳ ${voteCount}/${totalVoters} stemmen...`;
         }
     }
 });
