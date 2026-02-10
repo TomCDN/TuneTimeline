@@ -12,6 +12,7 @@
     <div id="app">
         <div class="top-controls">
             <button id="layout-toggle-btn" class="icon-btn" title="Toggle Mobile/Desktop View">📱</button>
+            <button id="tutorial-btn" class="icon-btn" title="Hoe werkt het spel?">❓</button>
         </div>
         <!-- Lobby State -->
         <div id="lobby-screen" class="screen">
@@ -228,8 +229,88 @@
         </div>
     </div>
 
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay" class="tutorial-overlay hidden">
+        <div class="glass-card tutorial-card">
+            <div class="tutorial-header">
+                <h2>📖 Hoe werkt het spel?</h2>
+                <button id="tutorial-close-btn" class="close-icon-btn">&times;</button>
+            </div>
+
+            <div class="tutorial-slides">
+                <div class="tutorial-slide active" data-slide="0">
+                    <div class="tutorial-icon">🎵</div>
+                    <h3>Welkom bij Tune Timeline!</h3>
+                    <p>Tune Timeline is een muziekspel waarin je nummers op jaar moet plaatsen op een tijdlijn. Speel
+                        met vrienden in teams en test jullie muziekkennis!</p>
+                    <div class="tutorial-tip">💡 Je speelt met z'n allen op één scherm of elk op je eigen telefoon.
+                    </div>
+                </div>
+
+                <div class="tutorial-slide" data-slide="1">
+                    <div class="tutorial-icon">🎉</div>
+                    <h3>Party Maken & Joinen</h3>
+                    <ul class="tutorial-steps">
+                        <li><strong>Host:</strong> Vul je naam in en klik op <em>✨ Create Party</em>.</li>
+                        <li><strong>Anderen:</strong> Vul je naam in, typ de <em>Room Code</em> en klik op <em>🚀 Join
+                                Party</em>.</li>
+                        <li>De host deelt de roomcode met de andere spelers.</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-slide" data-slide="2">
+                    <div class="tutorial-icon">👥</div>
+                    <h3>Teams & De Al-wetende</h3>
+                    <ul class="tutorial-steps">
+                        <li>Kies een team door op <em>👥 Join Team</em> te klikken.</li>
+                        <li>Elk team kan een <strong>🔮 Al-wetende</strong> kiezen — die ziet het juiste jaar en mag
+                            hints geven!</li>
+                        <li>De host stelt het <em>aantal punten om te winnen</em> in en start het spel.</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-slide" data-slide="3">
+                    <div class="tutorial-icon">🎧</div>
+                    <h3>Hoe Speel Je?</h3>
+                    <ul class="tutorial-steps">
+                        <li>Er wordt een nummer afgespeeld — luister goed!</li>
+                        <li>Het actieve team plaatst het nummer op de juiste plek in hun tijdlijn (op volgorde van
+                            jaar).</li>
+                        <li>Het andere team kan <strong>challengen</strong> als ze denken dat het fout is.</li>
+                        <li>Bij een correcte plaatsing: <strong>+1 punt</strong>. Bij een foute: kaart gaat weg.</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-slide" data-slide="4">
+                    <div class="tutorial-icon">💰</div>
+                    <h3>Hitster Tokens & Winnen</h3>
+                    <ul class="tutorial-steps">
+                        <li>Raad de <strong>artiest én titel</strong> correct om een <em>Hitster Token</em> te
+                            verdienen!</li>
+                        <li>Tokens zijn bonuspunten die tellen bij je eindscore.</li>
+                        <li>Het eerste team dat het doelpuntenaantal bereikt, wint! 🏆</li>
+                    </ul>
+                    <div class="tutorial-tip">🎯 Tip: Je hoeft de naam niet exact goed te raden — kleine spelfouten
+                        worden geaccepteerd.</div>
+                </div>
+            </div>
+
+            <div class="tutorial-nav">
+                <button id="tutorial-prev" class="secondary-btn" disabled>← Vorige</button>
+                <div class="tutorial-dots">
+                    <span class="tutorial-dot active" data-dot="0"></span>
+                    <span class="tutorial-dot" data-dot="1"></span>
+                    <span class="tutorial-dot" data-dot="2"></span>
+                    <span class="tutorial-dot" data-dot="3"></span>
+                    <span class="tutorial-dot" data-dot="4"></span>
+                </div>
+                <button id="tutorial-next" class="primary-btn">Volgende →</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="app.js?v=28"></script>
+    <script src="app.js?v=29"></script>
 </body>
 
 </html>

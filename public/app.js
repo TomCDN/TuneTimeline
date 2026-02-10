@@ -1750,3 +1750,104 @@ function updateDebugDisplay() {
 }
 
 setInterval(updateDebugDisplay, 1000); // Slower interval since it's hidden
+
+// ===== TUTORIAL MODULE (Self-contained, no existing code modified) =====
+(function () {
+    const tutorialBtn = document.getElementById('tutorial-btn');
+    const tutorialOverlay = document.getElementById('tutorial-overlay');
+    const tutorialCloseBtn = document.getElementById('tutorial-close-btn');
+    const tutorialPrev = document.getElementById('tutorial-prev');
+    const tutorialNext = document.getElementById('tutorial-next');
+    const slides = document.querySelectorAll('.tutorial-slide');
+    const dots = document.querySelectorAll('.tutorial-dot');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    function showSlide(index) {
+        if (index < 0 || index >= totalSlides) return;
+        currentSlide = index;
+
+        slides.forEach(s => s.classList.remove('active'));
+        dots.forEach(d => d.classList.remove('active'));
+
+        slides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+
+        tutorialPrev.disabled = currentSlide === 0;
+        tutorialNext.textContent = currentSlide === totalSlides - 1 ? '✅ Sluiten' : 'Volgende →';
+    }
+
+    function openTutorial() {
+        currentSlide = 0;
+        showSlide(0);
+        tutorialOverlay.classList.remove('hidden');
+    }
+
+    function closeTutorial() {
+        tutorialOverlay.classList.add('hidden');
+    }
+
+    // Button handlers
+    if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
+    if (tutorialCloseBtn) tutorialCloseBtn.addEventListener('click', closeTutorial);
+
+    if (tutorialPrev) tutorialPrev.addEventListener('click', () => showSlide(currentSlide - 1));
+    if (tutorialNext) tutorialNext.addEventListener('click', () => {
+        if (currentSlide === totalSlides - 1) {
+            closeTutorial();
+        } else {
+            showSlide(currentSlide + 1);
+        }
+    });
+
+    // Dot click navigation
+    dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            const idx = parseInt(dot.dataset.dot);
+            if (!isNaN(idx)) showSlide(idx);
+        });
+    });
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        if (tutorialOverlay.classList.contains('hidden')) return;
+        if (e.key === 'Escape') closeTutorial();
+        if (e.key === 'ArrowRight') {
+            if (currentSlide === totalSlides - 1) closeTutorial();
+            else showSlide(currentSlide + 1);
+        }
+        if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+    });
+
+    // Touch swipe support for mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    if (tutorialOverlay) {
+        tutorialOverlay.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        tutorialOverlay.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    // Swipe left → next
+                    if (currentSlide === totalSlides - 1) closeTutorial();
+                    else showSlide(currentSlide + 1);
+                } else {
+                    // Swipe right → prev
+                    showSlide(currentSlide - 1);
+                }
+            }
+        }, { passive: true });
+    }
+
+    // Close on overlay background click (not on the card itself)
+    if (tutorialOverlay) {
+        tutorialOverlay.addEventListener('click', (e) => {
+            if (e.target === tutorialOverlay) closeTutorial();
+        });
+    }
+})();
