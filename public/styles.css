@@ -31,20 +31,20 @@
 
 .top-controls {
     position: fixed;
-    top: 24px;
-    left: 24px;
+    top: 12px;
+    left: 12px;
     z-index: 1000;
     display: flex;
-    gap: 12px;
+    gap: 8px;
 }
 
 .icon-btn {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: var(--radius-md);
-    padding: 8px;
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     transition: var(--transition);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -73,11 +73,13 @@ body {
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
     padding: 24px;
     line-height: 1.6;
     overflow-x: hidden;
+    scroll-behavior: smooth;
 }
 
 /* Dynamic Background Blobs */
@@ -339,7 +341,7 @@ button:not(.icon-btn, .close-icon-btn, .preset-btn) {
     list-style: none;
     padding: 0;
     margin-bottom: 1.5rem;
-    min-height: 120px;
+    min-height: 80px;
 }
 
 .player-item {
@@ -429,9 +431,13 @@ button:not(.icon-btn, .close-icon-btn, .preset-btn) {
 .game-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
     color: var(--text-muted);
     font-weight: 600;
+    font-size: 0.9rem;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 #song-area {
@@ -485,9 +491,9 @@ button:not(.icon-btn, .close-icon-btn, .preset-btn) {
 }
 
 #song-msg {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 700;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 /* Guess Area */
@@ -517,7 +523,7 @@ button:not(.icon-btn, .close-icon-btn, .preset-btn) {
 /* Timelines */
 .teams-container {
     display: grid;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 body.desktop-layout .teams-container {
@@ -526,7 +532,7 @@ body.desktop-layout .teams-container {
 }
 
 .team-section {
-    padding: 2rem;
+    padding: 1.5rem;
     border-radius: var(--radius-lg);
     background: hsla(0, 0%, 100%, 0.02);
     border: 1px solid var(--card-border);
@@ -541,8 +547,8 @@ body.desktop-layout .teams-container {
 }
 
 .team-header h3 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.35rem;
+    margin-bottom: 0.75rem;
 }
 
 .team-stats {
@@ -710,67 +716,91 @@ body.desktop-layout .teams-container {
 /* Tablet & Mobile Optimizations */
 @media (max-width: 768px) {
     body {
-        padding: 16px;
+        padding: 12px;
+        padding-top: 48px;
     }
 
     header {
-        margin-bottom: 2.5rem;
+        margin-bottom: 2rem;
     }
 
     .glass-card {
-        padding: 1.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
     }
 
     .teams-setup {
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1rem;
     }
 
     .divider-vertical {
         flex-direction: row;
         width: 100%;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
     }
 
     .divider-vertical span {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
+    }
+
+    /* Game Header – compact */
+    .game-header {
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    /* Song area – tighter */
+    #song-area {
+        padding: 1rem;
+    }
+
+    .visualizer {
+        height: 28px;
+        margin-bottom: 0.75rem;
+        gap: 4px;
+    }
+
+    .visualizer span {
+        width: 5px;
+    }
+
+    #song-msg {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Team sections – compact */
+    .team-section {
+        padding: 1rem;
+    }
+
+    .team-header h3 {
+        font-size: 1.15rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .team-stats {
+        gap: 4px;
+    }
+
+    .team-score {
+        font-size: 0.9rem;
+    }
+
+    .teams-container {
+        gap: 1rem;
     }
 
     /* Timeline Adjustments */
     .timeline {
-        gap: 16px;
-        padding: 1rem 0;
+        gap: 12px;
+        padding: 0.75rem 0;
     }
 
     .music-card {
-        min-width: 140px;
-        height: 190px;
-        padding: 1.25rem;
-    }
-
-    .music-card .year {
-        font-size: 1.75rem;
-    }
-
-    .drop-zone {
-        min-width: 44px;
-        height: 44px;
-    }
-}
-
-@media (max-width: 480px) {
-    h1 {
-        font-size: 2.5rem;
-        letter-spacing: -2px;
-    }
-
-    header p {
-        font-size: 1rem;
-    }
-
-    .music-card {
-        min-width: 125px;
-        height: 170px;
+        min-width: 120px;
+        height: 165px;
         padding: 1rem;
     }
 
@@ -779,11 +809,11 @@ body.desktop-layout .teams-container {
     }
 
     .music-card .title {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
 
     .music-card .artist {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
     }
 
     .drop-zone {
@@ -791,11 +821,10 @@ body.desktop-layout .teams-container {
         height: 40px;
     }
 
-    .primary-btn,
-    .secondary-btn,
-    button:not(.icon-btn) {
-        padding: 0.9rem;
-        font-size: 0.95rem;
+    /* Guess area – compact */
+    .guess-area {
+        margin-top: 1rem;
+        padding-top: 1rem;
     }
 
     .guess-inputs {
@@ -803,8 +832,247 @@ body.desktop-layout .teams-container {
         gap: 8px;
     }
 
+    .guess-inputs input {
+        margin-bottom: 0;
+    }
+
+    .token-btn {
+        margin-top: 8px;
+    }
+
+    .token-hint {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Challenge interface – compact */
+    #challenge-interface {
+        padding: 1rem;
+    }
+
+    #challenge-interface h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    #challenge-interface p {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Host controls – compact */
+    .host-area {
+        margin-top: 0.75rem;
+    }
+
+    .confirm-btn {
+        margin-top: 0.75rem;
+    }
+
+    /* Waiting room – compact */
+    .full-width h2 {
+        font-size: 1.3rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .team-name-input {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .player-list {
+        min-height: 60px;
+        margin-bottom: 0.75rem;
+    }
+
+    .player-item {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .team-column {
+        padding: 1rem;
+    }
+
+    .join-team-btn {
+        font-size: 0.85rem !important;
+        padding: 0.7rem !important;
+    }
+
+    .oracle-selector {
+        padding: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .oracle-selector label {
+        font-size: 0.7rem;
+    }
+
+    /* Lobby footer – compact */
+    .waiting-footer {
+        margin-top: 0.5rem;
+    }
+
+    .lobby-controls {
+        gap: 8px;
+    }
+
+    .settings-group label {
+        font-size: 0.85rem;
+    }
+
+    .divider {
+        margin: 1rem 0;
+    }
+
+    /* Buttons */
+    .primary-btn,
+    .secondary-btn,
+    button:not(.icon-btn, .close-icon-btn, .preset-btn) {
+        padding: 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    /* Inputs */
+    input {
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+
     .join-group {
         flex-direction: column;
+    }
+
+    /* Hitster tokens smaller on mobile */
+    .hitster-token {
+        width: 26px;
+        height: 26px;
+        font-size: 0.75rem;
+    }
+
+    .token-bar {
+        gap: 4px;
+    }
+}
+
+@media (max-width: 420px) {
+    body {
+        padding: 8px;
+        padding-top: 44px;
+    }
+
+    h1 {
+        font-size: 2.2rem;
+        letter-spacing: -2px;
+    }
+
+    header {
+        margin-bottom: 1.5rem;
+    }
+
+    header p {
+        font-size: 0.9rem;
+    }
+
+    .glass-card {
+        padding: 1rem;
+        border-radius: var(--radius-md);
+    }
+
+    /* Ultra compact game area */
+    #song-area {
+        padding: 0.75rem;
+    }
+
+    .visualizer {
+        height: 24px;
+        margin-bottom: 0.5rem;
+    }
+
+    #song-msg {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .game-header {
+        font-size: 0.75rem;
+        margin-bottom: 0.4rem;
+    }
+
+    /* Smaller cards for narrow phones */
+    .music-card {
+        min-width: 105px;
+        height: 145px;
+        padding: 0.75rem;
+    }
+
+    .music-card .year {
+        font-size: 1.35rem;
+    }
+
+    .music-card .title {
+        font-size: 0.8rem;
+    }
+
+    .music-card .artist {
+        font-size: 0.7rem;
+    }
+
+    .drop-zone {
+        min-width: 36px;
+        height: 36px;
+    }
+
+    .team-section {
+        padding: 0.75rem;
+    }
+
+    .team-header h3 {
+        font-size: 1rem;
+    }
+
+    .timeline {
+        gap: 10px;
+        padding: 0.5rem 0;
+    }
+
+    .teams-container {
+        gap: 0.75rem;
+    }
+
+    /* Waiting room ultra compact */
+    .full-width h2 {
+        font-size: 1.1rem;
+    }
+
+    .team-name-input {
+        font-size: 1rem;
+    }
+
+    .primary-btn,
+    .secondary-btn,
+    button:not(.icon-btn, .close-icon-btn, .preset-btn) {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    input {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    /* Modal tighter */
+    .modal-content {
+        padding: 1.25rem;
+    }
+
+    /* Guess area compact */
+    .guess-area {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
     }
 }
 
@@ -924,6 +1192,7 @@ body.desktop-layout .teams-container {
         opacity: 0;
         transform: translateX(30px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
