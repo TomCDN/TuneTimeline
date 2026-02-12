@@ -11,8 +11,25 @@
 <body>
     <div id="app">
         <div class="top-controls">
-            <button id="layout-toggle-btn" class="icon-btn" title="Toggle Mobile/Desktop View">📱</button>
-            <button id="tutorial-btn" class="icon-btn" title="Hoe werkt het spel?">❓</button>
+            <button id="menu-btn" class="icon-btn" title="Menu">☰</button>
+        </div>
+
+        <!-- Game Menu -->
+        <div id="game-menu" class="game-menu hidden">
+            <div class="menu-content glass-card">
+                <div class="menu-header">
+                    <h3>Menu</h3>
+                    <button id="close-menu-btn" class="close-icon-btn">&times;</button>
+                </div>
+                <!-- Admin Badge moved here -->
+                <div id="menu-admin-badge" class="admin-badge-menu hidden">Admin Active</div>
+
+                <ul class="menu-list">
+                    <li><button id="menu-layout-btn" class="menu-item">📱 Toggle Layout</button></li>
+                    <li><button id="menu-tutorial-btn" class="menu-item">❓ Hoe werkt het?</button></li>
+                    <li><button id="menu-admin-btn" class="menu-item">⚙️ Admin Access</button></li>
+                </ul>
+            </div>
         </div>
         <!-- Lobby State -->
         <div id="lobby-screen" class="screen">

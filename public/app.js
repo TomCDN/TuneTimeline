@@ -154,13 +154,24 @@ const team1NameInput = document.getElementById('team1-name-input');
 const team2NameInput = document.getElementById('team2-name-input');
 const joinTeamBtns = document.querySelectorAll('.join-team-btn');
 const confirmPlacementBtn = document.getElementById('confirm-placement-btn');
-const layoutToggleBtn = document.getElementById('layout-toggle-btn');
+// const layoutToggleBtn = document.getElementById('layout-toggle-btn'); // REMOVED
 const revealBtn = document.getElementById('reveal-btn');
 const hostControls = document.getElementById('host-controls');
 
+// Menu Elements
+const menuBtn = document.getElementById('menu-btn');
+const gameMenu = document.getElementById('game-menu');
+const closeMenuBtn = document.getElementById('close-menu-btn');
+const menuLayoutBtn = document.getElementById('menu-layout-btn');
+const menuTutorialBtn = document.getElementById('menu-tutorial-btn');
+const menuAdminBtn = document.getElementById('menu-admin-btn');
+const menuAdminBadge = document.getElementById('menu-admin-badge');
+
+
 // --- Admin Panel Elements ---
-const adminBadge = document.getElementById('admin-badge');
+// const adminBadge = document.getElementById('admin-badge'); // REMOVED
 const adminLoginModal = document.getElementById('admin-login-modal');
+
 const adminPasswordInput = document.getElementById('admin-password-input');
 const adminLoginBtn = document.getElementById('admin-login-btn');
 const adminLoginCancel = document.getElementById('admin-login-cancel');
@@ -372,26 +383,54 @@ setInterval(() => {
 // (Moved up)
 
 // --- Layout Persistence ---
-const savedLayout = localStorage.getItem('gameLayout') || 'mobile';
-if (savedLayout === 'desktop') {
-    document.body.classList.add('desktop-layout');
-    if (layoutToggleBtn) {
-        layoutToggleBtn.textContent = '💻';
-        layoutToggleBtn.classList.add('active');
+// --- Helper: Menu Logic ---
+function toggleMenu(show) {
+    if (show) {
+        gameMenu.classList.remove('hidden');
+    } else {
+        gameMenu.classList.add('hidden');
     }
 }
 
-if (layoutToggleBtn) {
-    layoutToggleBtn.addEventListener('click', () => {
+if (menuBtn) {
+    menuBtn.addEventListener('click', () => toggleMenu(true));
+}
+
+if (closeMenuBtn) {
+    closeMenuBtn.addEventListener('click', () => toggleMenu(false));
+}
+
+if (gameMenu) {
+    gameMenu.addEventListener('click', (e) => {
+        if (e.target === gameMenu) {
+            toggleMenu(false);
+        }
+    });
+}
+
+// --- Layout Persistence ---
+const savedLayout = localStorage.getItem('gameLayout') || 'mobile';
+if (savedLayout === 'desktop') {
+    document.body.classList.add('desktop-layout');
+    if (menuLayoutBtn) {
+        menuLayoutBtn.innerHTML = '💻 Toggle Layout (Desktop)';
+    }
+}
+
+if (menuLayoutBtn) {
+    menuLayoutBtn.addEventListener('click', () => {
         const isDesktop = document.body.classList.toggle('desktop-layout');
-        layoutToggleBtn.classList.toggle('active', isDesktop);
-        layoutToggleBtn.textContent = isDesktop ? '💻' : '📱';
+        menuLayoutBtn.innerHTML = isDesktop ? '💻 Toggle Layout (Desktop)' : '📱 Toggle Layout (Mobile)';
         localStorage.setItem('gameLayout', isDesktop ? 'desktop' : 'mobile');
 
         // Refresh timelines if needed (though CSS should handle most)
         if (typeof renderTimelines === 'function') renderTimelines();
+
+        // Auto-close menu for better ux
+        toggleMenu(false);
     });
 }
+
 
 // --- Navigation ---
 function showScreen(screen) {
@@ -1627,10 +1666,16 @@ function handleChallenge(pos) {
 
 
 // --- Admin/Token Logic Re-restored ---
-adminBadge.addEventListener('click', () => {
-    adminLoginModal.classList.remove('hidden');
-    adminPasswordInput.focus();
-});
+// --- Admin/Token Logic Re-restored ---
+if (menuAdminBtn) {
+    menuAdminBtn.addEventListener('click', () => {
+        // Close menu first? Or keep it open? Let's close it so modal is clear
+        toggleMenu(false);
+        adminLoginModal.classList.remove('hidden');
+        adminPasswordInput.focus();
+    });
+}
+
 
 adminLoginCancel.addEventListener('click', () => {
     adminLoginModal.classList.add('hidden');
@@ -1656,6 +1701,7 @@ revealBtn.onclick = () => {
 // Server response to admin login
 socket.on('admin-authenticated', (success) => {
     if (success) {
+        if (menuAdminBadge) menuAdminBadge.classList.remove('hidden');
         adminLoginModal.classList.add('hidden');
         adminPanel.classList.remove('hidden');
         showNotification("Success", "Admin authenticated!");
@@ -1860,7 +1906,19 @@ setInterval(updateDebugDisplay, 1000); // Slower interval since it's hidden
     }
 
     // Button handlers
-    if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
+    // Button handlers
+    // if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
+    const menuTutorialBtn = document.getElementById('menu-tutorial-btn');
+    if (menuTutorialBtn) {
+        menuTutorialBtn.addEventListener('click', () => {
+            // Close main menu first
+            const gameMenu = document.getElementById('game-menu');
+            if (gameMenu) gameMenu.classList.add('hidden');
+
+            openTutorial();
+        });
+    }
+
     if (tutorialCloseBtn) tutorialCloseBtn.addEventListener('click', closeTutorial);
 
     if (tutorialPrev) tutorialPrev.addEventListener('click', () => showSlide(currentSlide - 1));
