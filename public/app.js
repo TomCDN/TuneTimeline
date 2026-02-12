@@ -264,6 +264,7 @@ let currentPlacement = null; // { teamId, pos }
 let currentChallenge = null; // { teamId, pos }
 let targetScore = 10;
 let roomHistory = [];
+let activeMobileTab = 'team1'; // New: tracks which team timeline is visible on mobile
 
 // Voting State
 let teamVotes = {}; // { sid: pos } - votes from my team
@@ -1419,7 +1420,78 @@ function renderTimelines() {
             }
         });
     });
+
+    // --- New: Sync Mobile UX Elements ---
+    if (typeof updateMobileScoreboard === 'function') updateMobileScoreboard();
 }
+
+function updateMobileScoreboard() {
+    ['team1', 'team2'].forEach(teamId => {
+        const team = teamsData[teamId];
+        if (!team) return;
+
+        // Update Tab Scores
+        const tabScore = document.getElementById(`tab-${teamId}-score`);
+        if (tabScore) tabScore.innerText = `${team.score} pts`;
+
+        // Update Scoreboard Strip
+        const stripName = document.getElementById(`strip-${teamId}-name`);
+        const stripScore = document.getElementById(`strip-${teamId}-score`);
+        const stripTokens = document.getElementById(`strip-${teamId}-tokens`);
+
+        if (stripName) stripName.innerText = team.name;
+        if (stripScore) stripScore.innerText = team.score;
+        if (stripTokens) {
+            stripTokens.innerHTML = '';
+            for (let i = 0; i < team.tokens; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'hitster-token';
+                dot.style.width = '12px';
+                dot.style.height = '12px';
+                dot.style.fontSize = '8px';
+                dot.innerText = 'H';
+                stripTokens.appendChild(dot);
+            }
+        }
+
+        // Update Visibility based on tabs
+        const section = document.getElementById(`${teamId}-section`);
+        if (section) {
+            section.classList.toggle('active-tab', activeMobileTab === teamId);
+        }
+    });
+
+    // Update Tab UI active state
+    document.querySelectorAll('.team-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.team === activeMobileTab);
+    });
+
+    // Manage Bottom Bar visibility
+    const bottomBar = document.getElementById('bottom-action-bar');
+    const bottomHostControls = document.querySelector('#bottom-action-bar #host-controls');
+    const bottomConfirmBtn = document.querySelector('#bottom-action-bar #confirm-placement-btn');
+
+    if (bottomBar) {
+        // Find if either original button is visible
+        const hostBtnVisible = !hostControls.classList.contains('hidden');
+        const confirmBtnVisible = !confirmPlacementBtn.classList.contains('hidden');
+
+        // Match visibility in bottom bar
+        if (bottomHostControls) bottomHostControls.classList.toggle('hidden', !hostBtnVisible);
+        if (bottomConfirmBtn) bottomConfirmBtn.classList.toggle('hidden', !confirmBtnVisible);
+
+        // Show bar if either is active
+        bottomBar.classList.toggle('hidden', !hostBtnVisible && !confirmBtnVisible);
+    }
+}
+
+// Add tab switching listeners
+document.querySelectorAll('.team-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        activeMobileTab = tab.dataset.team;
+        updateMobileScoreboard();
+    });
+});
 
 // --- Event Delegation ---
 function setupTimelineListeners() {
