@@ -1669,10 +1669,15 @@ function handleChallenge(pos) {
 // --- Admin/Token Logic Re-restored ---
 if (menuAdminBtn) {
     menuAdminBtn.addEventListener('click', () => {
-        // Close menu first? Or keep it open? Let's close it so modal is clear
+        console.log("Menu Admin Button Clicked!");
         toggleMenu(false);
-        adminLoginModal.classList.remove('hidden');
-        adminPasswordInput.focus();
+        if (adminLoginModal) {
+            console.log("Showing Admin Modal");
+            adminLoginModal.classList.remove('hidden');
+            if (adminPasswordInput) adminPasswordInput.focus();
+        } else {
+            console.error("Admin Modal NOT FOUND");
+        }
     });
 }
 

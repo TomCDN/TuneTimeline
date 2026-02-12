@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tune Timeline | Multiplayer Music Party</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
 </head>
 
 <body>
@@ -234,18 +234,20 @@
     </div>
 
     <!-- Admin Login Modal -->
-    <div id="admin-login-modal" class="glass-card hidden">
-        <h3>Admin Access</h3>
-        <p>Enter master code to unlock settings</p>
-        <input type="password" id="admin-password-input" placeholder="Enter code...">
-        <div class="modal-buttons">
-            <button id="admin-login-btn">Login</button>
-            <button id="admin-login-cancel" class="secondary-btn">Cancel</button>
+    <div id="admin-login-modal" class="modal-overlay hidden">
+        <div class="glass-card modal-content">
+            <h3>Admin Access</h3>
+            <p>Enter master code to unlock settings</p>
+            <input type="password" id="admin-password-input" placeholder="Enter code...">
+            <div class="modal-buttons">
+                <button id="admin-login-btn" class="primary-btn">Login</button>
+                <button id="admin-login-cancel" class="secondary-btn">Cancel</button>
+            </div>
         </div>
     </div>
 
     <!-- Admin Panel -->
-    <div id="admin-badge" class="admin-badge">Admin</div>
+    <!-- Admin Badge Removed -->
     <div id="admin-panel" class="glass-card hidden">
         <div class="admin-header">
             <h3>⚙️ Admin Settings</h3>
@@ -357,7 +359,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="app.js?v=30"></script>
+    <script src="app.js?v=31"></script>
 </body>
 
 </html>
