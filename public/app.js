@@ -648,10 +648,16 @@ createBtn.addEventListener('click', () => {
 
 if (soloBtn) {
     soloBtn.addEventListener('click', () => {
+        console.log("Solo Button Clicked!"); // Debug
         logToOverlay("Click: Play Solo");
         unlockAudio();
         myName = usernameInput.value.trim() || "Solo Player";
-        startSoloGame();
+        try {
+            startSoloGame();
+        } catch (e) {
+            console.error("Error starting solo game:", e);
+            showNotification("Error", "Could not start solo game: " + e.message);
+        }
     });
 }
 
