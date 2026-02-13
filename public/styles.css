@@ -1629,3 +1629,43 @@ body.desktop-layout .teams-container {
         padding: 0.75rem 0.85rem 0.75rem 2.2rem;
     }
 }
+
+/* --- Solo Mode Styles --- */
+body.solo-mode .team-section#team2-section,
+body.solo-mode .scoreboard-strip,
+body.solo-mode .team-tabs,
+body.solo-mode #challenge-interface,
+body.solo-mode .game-header,
+body.solo-mode #host-controls {
+    display: none !important;
+}
+
+body.solo-mode #team1-section {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    display: block !important;
+    /* Force show even on mobile */
+}
+
+body.solo-mode .teams-container {
+    justify-content: center;
+}
+
+body.solo-mode #bottom-action-bar {
+    justify-content: space-between;
+}
+
+body.solo-mode #solo-lives-display {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    margin-right: auto;
+}
+
+/* Solo Game Over Specifics */
+body.solo-mode .winner-display {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}

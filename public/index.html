@@ -43,6 +43,9 @@
 
                 <div class="actions">
                     <button id="create-btn" class="primary-btn">✨ Create Party</button>
+                    <button id="solo-btn" class="secondary-btn"
+                        style="background: var(--accent); color: white; border-color: var(--accent);">👤 Play
+                        Solo</button>
                     <div class="divider"><span>OR</span></div>
                     <div class="join-group">
                         <input type="text" id="room-input" placeholder="Room Code" maxlength="5">
@@ -201,6 +204,10 @@
 
             <!-- Fixed Bottom Action Bar -->
             <div id="bottom-action-bar" class="bottom-bar hidden">
+                <div id="solo-lives-display" class="hidden"
+                    style="font-weight:bold; color:#ff4444; font-size:1.2rem; margin-right:auto; padding-left:20px;">
+                    Lives: <span>❤️❤️❤️</span>
+                </div>
                 <div id="host-controls" class="host-area hidden">
                     <button id="reveal-btn" class="primary-btn">🔍 Onthul Jaar</button>
                 </div>

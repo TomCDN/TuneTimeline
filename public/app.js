@@ -283,6 +283,16 @@ let myVote = null; // My current vote position
 let hasVoted = false;
 let isCountingDown = false;
 
+// --- Solo Mode State ---
+let isSoloMode = false;
+let soloGameState = {
+    timeline: [],
+    score: 0,
+    lives: 3
+};
+const soloBtn = document.getElementById('solo-btn');
+const soloLivesDisplay = document.getElementById('solo-lives-display');
+
 // --- iOS Audio Autoplay Unlock ---
 let audioUnlocked = false;
 let audioCtx = null;
@@ -582,6 +592,10 @@ claimTokenBtn.addEventListener('click', () => {
 });
 
 playAgainBtn.addEventListener('click', () => {
+    if (isSoloMode) {
+        startSoloGame();
+        return;
+    }
     console.log("Play Again clicked. Room:", myRoomCode);
     if (!myRoomCode) {
         showNotification("Fout", "Geen room code gevonden. Refresh de pagina.");
@@ -631,6 +645,15 @@ createBtn.addEventListener('click', () => {
     logToOverlay(`Emit: create-room (${myName})`);
     socket.emit('create-room', myName);
 });
+
+if (soloBtn) {
+    soloBtn.addEventListener('click', () => {
+        logToOverlay("Click: Play Solo");
+        unlockAudio();
+        myName = usernameInput.value.trim() || "Solo Player";
+        startSoloGame();
+    });
+}
 
 joinBtn.addEventListener('click', () => {
     logToOverlay("Click: Join Party");
@@ -1979,10 +2002,169 @@ setInterval(updateDebugDisplay, 1000); // Slower interval since it's hidden
         }, { passive: true });
     }
 
-    // Close on overlay background click (not on the card itself)
-    if (tutorialOverlay) {
-        tutorialOverlay.addEventListener('click', (e) => {
-            if (e.target === tutorialOverlay) closeTutorial();
-        });
-    }
 })();
+
+// ===== SOLO MODE LOGIC =====
+async function startSoloGame() {
+    isSoloMode = true;
+    document.body.classList.add('solo-mode');
+
+    // Reset State
+    soloGameState = {
+        timeline: [],
+        score: 0,
+        lives: 3
+    };
+
+    // Mock teamsData for renderTimelines compatibility
+    teamsData = {
+        team1: { name: "You", timeline: [], tokens: 0, score: 0, players: [{ sid: 'solo', name: 'You' }] },
+        team2: { name: "CPU", timeline: [], tokens: 0, score: 0, players: [] }
+    };
+
+    myTeam = 'team1';
+    activeTeam = 'team1';
+    turnState = 'playing';
+
+    // UI Setup
+    showScreen(gameScreen);
+    updateSoloUI();
+
+    // Initial Song
+    try {
+        await fetchSoloSong();
+    } catch (e) {
+        showNotification("Error", "Could not start solo game. Check connection.");
+        console.error(e);
+    }
+}
+
+function updateSoloUI() {
+    // Update Score
+    document.getElementById('team1-score').innerText = soloGameState.score;
+    document.getElementById('strip-team1-score').innerText = soloGameState.score;
+
+    // Update Lives
+    let hearts = "❤️".repeat(soloGameState.lives);
+    if (soloGameState.lives === 0) hearts = "💀";
+    document.querySelector('#solo-lives-display span').innerText = hearts;
+
+    // Update Timeline Data
+    teamsData.team1.timeline = soloGameState.timeline;
+    renderTimelines();
+
+    // Hide irrelevant parts
+    document.getElementById('game-room-code').innerText = "SOLO";
+    document.getElementById('current-player-name').innerText = myName;
+}
+
+// Logic to check placement (Client-side)
+function checkSoloPlacement(pos) {
+    if (!currentSongData) return;
+
+    const year = currentSongData.year;
+    const timeline = soloGameState.timeline;
+
+    // Check neighbors
+    const prevYear = (pos > 0) ? timeline[pos - 1].year : -Infinity;
+    const nextYear = (pos < timeline.length) ? timeline[pos].year : Infinity;
+
+    const isCorrect = (year >= prevYear && year <= nextYear);
+
+    if (isCorrect) {
+        // Success
+        soloGameState.timeline.splice(pos, 0, currentSongData);
+        soloGameState.score++;
+        playSuccessSound(); // Optional if exists, or just visual
+
+        showNotification("Correct! 🎉", `Het jaar was <b>${year}</b>.`);
+
+        // Next Turn
+        updateSoloUI();
+        currentSongData = null;
+        fetchSoloSong();
+
+    } else {
+        // Fail
+        soloGameState.lives--;
+        showNotification("Fout! ❌", `Het jaar was <b>${year}</b>. (Niet correct geplaatst)`);
+
+        if (soloGameState.lives <= 0) {
+            endSoloGame();
+        } else {
+            updateSoloUI();
+            currentSongData = null;
+            fetchSoloSong();
+        }
+    }
+}
+
+function endSoloGame() {
+    document.body.classList.remove('solo-mode');
+    showScreen(gameOverScreen);
+
+    document.getElementById('winner-display').innerText = `Score: ${soloGameState.score}`;
+    document.getElementById('game-over-msg').innerHTML = `Game Over! Je had ${soloGameState.score} kaarten goed geplaatst.`;
+
+    playAgainBtn.classList.remove('hidden');
+
+    // Override play again behavior for solo
+    playAgainBtn.onclick = () => {
+        playAgainBtn.onclick = null; // Remove this handler
+        startSoloGame(); // Restart solo
+    };
+}
+
+async function fetchSoloSong() {
+    document.getElementById('song-msg').innerText = "Loading song...";
+
+    // Reuse the host fetch logic but just for one song
+    try {
+        const genres = ['80s hits', '90s hits', '2000s hits', '2010s hits', 'top 40', 'rock classics', 'pop hits'];
+        const genre = genres[Math.floor(Math.random() * genres.length)];
+        // Use a proxy or direct itunes if CORS allows (it usually doesn't, so use same proxy path as app)
+        // Since we are client-side only, we might hit CORS if we call iTunes directly.
+        // We really should rely on the server proxy if possible.
+        // But startSoloGame is client-side. The server endpoint /api/proxy/itunes is available.
+
+        const response = await fetchWithRetry(`/api/proxy/itunes?term=${encodeURIComponent(genre)}&limit=50`);
+        const results = response.results.filter(t => t.previewUrl);
+
+        if (results.length === 0) throw new Error("No songs found");
+
+        // Simple random pick
+        const track = results[Math.floor(Math.random() * results.length)];
+
+        currentSongData = {
+            title: track.trackName,
+            artist: track.artistName,
+            year: new Date(track.releaseDate).getFullYear(),
+            url: track.previewUrl
+        };
+
+        // Play Audio
+        audioEl.src = currentSongData.url;
+        audioEl.play().catch(e => console.error("Auto-play failed:", e));
+
+        document.getElementById('song-msg').innerText = "🎵 Raad het jaar!";
+
+        // Render drag zones active
+        renderTimelines();
+
+    } catch (e) {
+        console.error("Solo fetch error:", e);
+        showNotification("Error", "Kon geen nummer laden. Probeer opnieuw.");
+        document.getElementById('song-msg').innerText = "Error loading song.";
+    }
+}
+
+// Modify global click handler for drop zones to support solo
+document.addEventListener('click', (e) => {
+    if (isSoloMode && e.target.classList.contains('drop-zone')) {
+        const pos = parseInt(e.target.dataset.pos);
+        // In solo mode, clicking a drop zone = verify placement immediately
+        if (!isNaN(pos) && currentSongData) {
+            checkSoloPlacement(pos);
+        }
+    }
+});
