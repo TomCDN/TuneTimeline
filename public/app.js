@@ -552,6 +552,31 @@ const checkMatch = (guess, actual, isArtist = false) => {
 
 claimTokenBtn.addEventListener('click', () => {
     if (!currentSongData) return showNotification("Fout", "Er speelt geen nummer!");
+
+    // Solo Mode Handling
+    if (isSoloMode) {
+        const artistGuess = guessArtistInput.value;
+        const titleGuess = guessTitleInput.value;
+        if (!artistGuess.trim() || !titleGuess.trim()) return showNotification("Incompleet", "Vul zowel artiest als titel in!");
+
+        const isArtistCorrect = checkMatch(artistGuess, currentSongData.artist, true);
+        const isTitleCorrect = checkMatch(titleGuess, currentSongData.title, false);
+
+        if (isArtistCorrect && isTitleCorrect) {
+            showNotification("CORRECT! 🎉", "Je krijgt een Bonus Punt!");
+            claimTokenBtn.disabled = true;
+            claimTokenBtn.innerText = "✅ Token Claimed!";
+            soloGameState.score++;
+            updateSoloUI();
+        } else {
+            let msg = "Dat was niet goed.";
+            if (isArtistCorrect && !isTitleCorrect) msg += " (De artiest was wel goed!)";
+            if (!isArtistCorrect && isTitleCorrect) msg += " (De titel was wel goed!)";
+            showNotification("Helaas ❌", msg);
+        }
+        return;
+    }
+
     if (!myTeam) return showNotification("Fout", "Je zit niet in een team!");
 
     const artistGuess = guessArtistInput.value;
@@ -1646,6 +1671,7 @@ socket.on('vote-update', ({ teamId, votes, voterCount }) => {
 // Confirm placement button handler
 if (confirmPlacementBtn) {
     confirmPlacementBtn.addEventListener('click', () => {
+        if (isSoloMode) return; // Disable in solo mode
         if (!myTeam || myTeam !== activeTeam) return;
 
         socket.emit('game-action', {
